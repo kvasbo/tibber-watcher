@@ -93,6 +93,12 @@ export class Tibber {
       tibberFeedHome.connect().then(() => {
           console.log('Tibber home initiated');
       });
+      tibberFeedCabin.on('data', (data) => {
+          this.parseData(data, 'home');
+      });
+      tibberFeedCabin.connect().then(() => {
+          console.log('Tibber home initiated');
+      });
       // Start power price loop
       this.updatePowerprices();
       this.updateTodayConsumption(homeId);
@@ -152,7 +158,7 @@ export class Tibber {
               }
           }
           // Publish to MQTT
-          const mqttTopicBase = `tellulf/tibber/${where}/`;
+          const mqttTopicBase = `tibber/${where}/`;
 
           this.mqttClient.publish(mqttTopicBase + 'power', power);
           this.mqttClient.publish(
