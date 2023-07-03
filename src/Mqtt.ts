@@ -7,6 +7,7 @@ const MQTT_URL = process.env.MQTT_URL as string;
 const MQTT_PORT = process.env.MQTT_PORT as string;
 const MQTT_USER = process.env.MQTT_USER as string;
 const MQTT_PASS = process.env.MQTT_PASS as string;
+const MQTT_ROOT_TOPIC = process.env.MQTT_ROOT_TOPIC as string;
 
 const options: mqtt.IClientOptions = {
     host: MQTT_URL,
@@ -26,11 +27,6 @@ export class MqttClient {
         this.client
             .on('connect', () => {
                 this.log(`${options.clientId} connected to ${options.host}`);
-                this.client.subscribe('#');
-                this.client.publish(
-                    'tellulf/poll',
-                    'Tellulf is online and polling'
-                );
             })
             .on('error', (error) => {
                 this.log('MQTT Error', error.message);
@@ -44,7 +40,9 @@ export class MqttClient {
      */
     public publish(topic: string, message: string | number | null | undefined) {
         if (message !== null && message !== undefined) {
-            this.client.publish(topic, message.toString());
+            const fullTopic = MQTT_ROOT_TOPIC + '/' + topic;
+            this.client.publish(fullTopic, message.toString());
+            console.log('MQTT published', topic, message);
         }
     }
 

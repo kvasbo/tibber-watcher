@@ -1,7 +1,7 @@
 import { TibberFeed, TibberQuery, IConfig } from 'tibber-api';
 import { MqttClient } from './Mqtt';
 import * as z from 'zod';
-import * as dotenv from 'dotenv';
+
 
 enum EnergyResolution {
   HOURLY = 'HOURLY',
@@ -28,7 +28,6 @@ const TibberSubscriptionSchema = z.object({
 
 type TibberData = z.infer<typeof TibberSubscriptionSchema>;
 
-
 const tibberKey: string = process.env.TIBBER_KEY
     ? process.env.TIBBER_KEY.toString()
     : '';
@@ -51,7 +50,6 @@ const configBase: IConfig = {
   apiEndpoint: {
       apiKey: tibberKey,
       queryUrl: 'https://api.tibber.com/v1-beta/gql',
-      // requestTimeout: 5000,
   },
   // Query configuration.
   timestamp: true,
@@ -70,7 +68,6 @@ const configBase: IConfig = {
 };
 
 const configHome: IConfig = { ...configBase, homeId: homeId };
-
 const configCabin: IConfig = { ...configBase, homeId: cabinId };
 
 // Instance of TibberQuery
@@ -94,7 +91,7 @@ export class Tibber {
           console.log('Tibber home initiated');
       });
       tibberFeedCabin.on('data', (data) => {
-          this.parseData(data, 'home');
+          this.parseData(data, 'cabin');
       });
       tibberFeedCabin.connect().then(() => {
           console.log('Tibber home initiated');
@@ -108,10 +105,10 @@ export class Tibber {
   private updatePowerprices() {
       tibberQueryHome.getCurrentEnergyPrice(homeId).then((data) => {
           // Publish to MQTT
-          this.mqttClient.publish('tellulf/tibber/price/total', data.total);
-          this.mqttClient.publish('tellulf/tibber/price/energy', data.energy);
-          this.mqttClient.publish('tellulf/tibber/price/tax', data.tax);
-          this.mqttClient.publish('tellulf/tibber/price/level', data.level);
+          this.mqttClient.publish('tibber/price/total', data.total);
+          this.mqttClient.publish('tibber/price/energy', data.energy);
+          this.mqttClient.publish('tibber/price/tax', data.tax);
+          this.mqttClient.publish('tibber/price/level', data.level);
       });
       setTimeout(() => {
           this.updatePowerprices();
@@ -158,7 +155,7 @@ export class Tibber {
               }
           }
           // Publish to MQTT
-          const mqttTopicBase = `tibber/${where}/`;
+          const mqttTopicBase = `${where}/`;
 
           this.mqttClient.publish(mqttTopicBase + 'power', power);
           this.mqttClient.publish(
