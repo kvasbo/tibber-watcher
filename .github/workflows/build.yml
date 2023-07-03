@@ -1,0 +1,98 @@
+name: Build and push to Github Container Registry
+
+on:
+    push:
+        branches:
+            - '*' # Pushes to any branch
+
+env:
+    REGISTRY: ghcr.io
+    IMAGE_NAME: ${{ github.repository }}
+    IMAGE_PUSH: true
+    NODE_VERSION: 20.3
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        name: Lint and Build
+        permissions:
+            contents: read
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: yarn
+            - name: Install dependencies
+              run: yarn install
+            - name: Lint
+              run: yarn run lint
+            - name: Build
+              run: yarn run build
+            - name: Upload artifact # All the stuff needed to run the app and build the image except for node_modules as we need a production version of that
+              uses: actions/upload-artifact@v3
+              with:
+                  name: dist
+                  path: |
+                      build
+                      Dockerfile
+                      yarn.lock
+                      package.json
+                      assets
+                      views
+    create-docker-image:
+        name: Build and Push Docker Image
+        runs-on: ubuntu-latest
+        needs: build
+        permissions:
+            packages: write
+        steps:
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v2
+            - name: Download build artifact
+              uses: actions/download-artifact@v3
+              with:
+                  name: dist
+                  path: .
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: 'yarn'
+            - name: Install dependencies
+              run: yarn install --production --ignore-scripts
+
+            - name: Extract metadata (tags, labels)
+              id: meta
+              uses: docker/metadata-action@v4
+              with:
+                  images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+            - name: Log in to the registry
+              uses: docker/login-action@v2
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Build and push
+              uses: docker/build-push-action@v4
+              with:
+                  context: .
+                  push: ${{ env.IMAGE_PUSH }}
+                  tags: ${{ steps.meta.outputs.tags }}
+                  labels: ${{ steps.meta.outputs.labels }}
+    release:
+        name: Create Release
+        needs: create-docker-image
+        runs-on: ubuntu-latest
+        if: github.ref == 'refs/heads/main'
+        steps:
+            - name: Generate release tag
+              id: tag
+              run: |
+                  echo "::set-output name=release_tag::Build_$(date +"%Y.%m.%d_%H-%M")"
+            - name: Release
+              uses: softprops/action-gh-release@v1
+              with:
+                  tag_name: ${{ steps.tag.outputs.release_tag }}

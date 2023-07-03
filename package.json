@@ -1,0 +1,68 @@
+{
+    "name": "tibber-watcher",
+    "version": "1.0.0",
+    "main": "dist/watcher.js",
+    "repository": "https://github.com/kvasbo/tibber-watcher.git",
+    "author": "Audun Kvasbø <audun@kvasbo.no>",
+    "license": "MIT",
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/watcher.js",
+        "watch": "tsc --watch",
+        "dev": "nodemon dist/watcher.js",
+        "lint": "eslint ./src --ext .ts"
+    },
+    "dependencies": {
+        "dotenv": "^16.3.1",
+        "mqtt": "^4.3.7",
+        "tibber-api": "^5.1.8",
+        "zod": "^3.21.4"
+    },
+    "devDependencies": {
+      "@types/node": "^20.3.3",
+      "@typescript-eslint/eslint-plugin": "^5.60.1",
+      "@typescript-eslint/parser": "^5.60.1",
+      "eslint": "^8.44.0",
+      "eslint-config-prettier": "^8.8.0",
+      "eslint-plugin-prettier": "^4.2.1",
+      "nodemon": "^2.0.22",
+      "prettier": "^2.8.8",
+      "typescript": "^5.1.6"
+    },
+    "prettier": {
+        "trailingComma": "es5",
+        "tabWidth": 4,
+        "semi": true,
+        "singleQuote": true
+    },
+    "eslintConfig": {
+        "plugins": [
+            "@typescript-eslint",
+            "prettier"
+        ],
+        "ignorePatterns": [
+            "ts/client/*.ts"
+        ],
+        "extends": [
+            "eslint:recommended",
+            "plugin:@typescript-eslint/eslint-recommended",
+            "plugin:@typescript-eslint/recommended",
+            "prettier"
+        ],
+        "parserOptions": {
+            "ecmaVersion": 2022,
+            "sourceType": "module"
+        },
+        "env": {
+            "node": true,
+            "es6": true,
+            "es2022": true
+        },
+        "rules": {
+            "no-console": 0,
+            "no-unused-vars": 1,
+            "no-undef": 1,
+            "prettier/prettier": 2
+        }
+    }
+}

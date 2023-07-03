@@ -1,0 +1,16 @@
+services:
+    tibber-watcher:
+        image: ghcr.io/kvasbo/tibber-watcher:main
+        restart: unless-stopped
+        environment:
+            - TIBBER_KEY=${TIBBER_KEY}
+            - TIBBER_ID_HOME=${TIBBER_ID_HOME}
+            - TIBBER_ID_CABIN=${TIBBER_ID_CABIN}
+            - MQTT_URL=${MQTT_URL}
+            - MQTT_PORT=${MQTT_PORT}
+            - MQTT_USER=${MQTT_USER}
+            - MQTT_PASS=${MQTT_PASS}
+networks:
+    default:
+        name: ${NETWORK_NAME}
+        external: true
