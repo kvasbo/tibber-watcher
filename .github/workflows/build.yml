@@ -8,7 +8,6 @@ on:
 env:
     REGISTRY: ghcr.io
     IMAGE_NAME: ${{ github.repository }}
-    IMAGE_PUSH: true
     NODE_VERSION: 20.3
 
 jobs:
@@ -73,10 +72,19 @@ jobs:
                   registry: ${{ env.REGISTRY }}
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Build for test
+              uses: docker/build-push-action@v4
+              with:
+                  context: .
+                  push: false
+                  tags: test/tast:tust
+            - name: Test
+              run: |
+                  docker run --rm test/tast:tust
             - name: Build and push
               uses: docker/build-push-action@v4
               with:
                   context: .
-                  push: ${{ env.IMAGE_PUSH }}
+                  push: true
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
