@@ -94,10 +94,10 @@ export class Tibber {
     private updatePowerprices() {
         tibberQueryHome.getCurrentEnergyPrice(homeId).then((data) => {
             // Publish to MQTT
-            this.mqttClient.publish('tibber/price/total', data.total);
-            this.mqttClient.publish('tibber/price/energy', data.energy);
-            this.mqttClient.publish('tibber/price/tax', data.tax);
-            this.mqttClient.publish('tibber/price/level', data.level);
+            this.mqttClient.publish('price/total', data.total);
+            this.mqttClient.publish('price/energy', data.energy);
+            this.mqttClient.publish('price/tax', data.tax);
+            this.mqttClient.publish('price/level', data.level);
         });
         setTimeout(() => {
             this.updatePowerprices();
