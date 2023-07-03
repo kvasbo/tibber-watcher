@@ -77,10 +77,10 @@ jobs:
               with:
                   context: .
                   push: false
-                  tags: test/tast:tust
+                  tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
             - name: Test
               run: |
-                  docker run --rm test/tast:tust
+                  docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
             - name: Build and push
               uses: docker/build-push-action@v4
               with:
