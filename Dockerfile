@@ -9,4 +9,4 @@ WORKDIR /app
 # Copy source to web directory
 COPY ./dist /app
 
-CMD ["node", "/tellulf/build/Server.js"]
+CMD ["node", "app/watcher.js"]
