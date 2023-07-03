@@ -36,12 +36,10 @@ jobs:
               with:
                   name: dist
                   path: |
-                      build
+                      dist
                       Dockerfile
                       yarn.lock
                       package.json
-                      assets
-                      views
     create-docker-image:
         name: Build and Push Docker Image
         runs-on: ubuntu-latest
