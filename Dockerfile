@@ -9,4 +9,4 @@ WORKDIR /app
 # Copy source to web directory
 COPY ./dist /app
 
-CMD ["node", "watcher.js"]
+CMD ["node", "dist/watcher.js"]
