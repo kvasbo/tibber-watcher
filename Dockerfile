@@ -6,7 +6,4 @@ RUN mkdir /app
 # Set working directory
 WORKDIR /app
 
-# Copy source to web directory
-COPY ./dist /app
-
 CMD ["node", "dist/watcher.js"]

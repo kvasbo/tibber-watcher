@@ -2,6 +2,8 @@ services:
     tibber-watcher:
         image: ghcr.io/kvasbo/tibber-watcher:main
         restart: unless-stopped
+        stdin_open: true
+        tty: true
         environment:
             - TIBBER_KEY=${TIBBER_KEY}
             - TIBBER_ID_HOME=${TIBBER_ID_HOME}

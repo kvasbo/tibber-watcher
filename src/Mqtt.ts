@@ -42,7 +42,7 @@ export class MqttClient {
         if (message !== null && message !== undefined) {
             const fullTopic = MQTT_ROOT_TOPIC + '/' + topic;
             this.client.publish(fullTopic, message.toString());
-            console.log('MQTT published', topic, message);
+            this.log(fullTopic, message);
         }
     }
 
