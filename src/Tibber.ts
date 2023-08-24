@@ -85,7 +85,7 @@ export class Tibber {
             this.parseData(data, 'cabin');
         });
         tibberFeedCabin.connect().then(() => {
-            console.log('Tibber home initiated');
+            console.log('Tibber cabin initiated');
         });
         // Start power price loop
         this.updatePowerprices();

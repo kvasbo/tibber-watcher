@@ -13,21 +13,21 @@
         "lint": "eslint ./src --ext .ts"
     },
     "dependencies": {
-        "dotenv": "^16.3.1",
-        "mqtt": "^4.3.7",
-        "tibber-api": "^5.1.8",
-        "zod": "^3.21.4"
+        "dotenv": "^16",
+        "mqtt": "^4",
+        "tibber-api": "^5",
+        "zod": "^3"
     },
     "devDependencies": {
-      "@types/node": "^20.3.3",
-      "@typescript-eslint/eslint-plugin": "^5.60.1",
-      "@typescript-eslint/parser": "^5.60.1",
-      "eslint": "^8.44.0",
-      "eslint-config-prettier": "^8.8.0",
-      "eslint-plugin-prettier": "^4.2.1",
-      "nodemon": "^2.0.22",
-      "prettier": "^2.8.8",
-      "typescript": "^5.1.6"
+        "@types/node": "^20",
+        "@typescript-eslint/eslint-plugin": "^6",
+        "@typescript-eslint/parser": "^6",
+        "eslint": "^8",
+        "eslint-config-prettier": "^9",
+        "eslint-plugin-prettier": "^5",
+        "nodemon": "^3",
+        "prettier": "^3",
+        "typescript": "^5"
     },
     "prettier": {
         "trailingComma": "es5",
