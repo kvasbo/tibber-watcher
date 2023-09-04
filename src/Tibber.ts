@@ -39,7 +39,7 @@ const TibberSubscriptionSchema = z.object({
     maxPowerProduction: z.number().nullable(),
 });
 
-const MIN_PUSH_INTERVAL = 15 * 1000; // 15 seconds
+const MIN_PUSH_INTERVAL = 15 * 1000; // 15 seconds!
 
 type TibberData = z.infer<typeof TibberSubscriptionSchema>;
 
@@ -198,14 +198,30 @@ export class Tibber {
             hoursToGet,
             homeId
         );
-        const homeThisMonth = await this.getMonthlyUsageSoFar(consumptionHome);
-        this.parseUsage(consumptionHome, 'home', homeThisMonth);
+
+        const homeUsageThisMonth =
+            await this.getMonthlyUsageSoFar(consumptionHome);
+        const homeCostThisMonth = await this.parseUsage(
+            consumptionHome,
+            homeUsageThisMonth
+        );
+
+        this.sendToMQTT('home', 'usedThisMonth', homeUsageThisMonth);
+        this.sendToMQTT('home', 'costThisMonth', homeCostThisMonth);
+
         const consumptionCabin = await tibberQueryHome.getConsumption(
             EnergyResolution.HOURLY,
-            24,
+            hoursToGet,
             cabinId
         );
-        this.parseUsage(consumptionCabin, 'cabin', 999999); // No support in cabin
+
+        const cabinThisMonth =
+            await this.getMonthlyUsageSoFar(consumptionCabin);
+        const cabinCost = await this.parseUsage(consumptionCabin, 999999); // No support in cabin
+
+        // Publish to MQTT
+        this.sendToMQTT('cabin', 'costThisMonth', cabinCost);
+        this.sendToMQTT('cabin', 'usedThisMonth', cabinThisMonth);
         setTimeout(
             () => {
                 this.updateUsage();
@@ -217,9 +233,8 @@ export class Tibber {
     // Parse usage data and find actual cost.
     private async parseUsage(
         usageData: IConsumption[],
-        where: 'home' | 'cabin',
         usedThisMonthSoFar: number
-    ): Promise<void> {
+    ): Promise<number> {
         // If in cabin, no support!
         const startOfDay = DateTime.now().setZone('Europe/Oslo').startOf('day');
         // Filter data to only today
@@ -240,7 +255,6 @@ export class Tibber {
                 ...data,
                 priceWithFees: price,
                 priceWithFeesAndVAT: price * 1.25,
-                // TODO: Strømstøtte!
             };
         });
 
@@ -249,8 +263,7 @@ export class Tibber {
             return acc + cur.priceWithFeesAndVAT;
         }, 0);
 
-        // Publish to MQTT
-        this.mqttClient.publish(`${where}/cost`, totalCost);
+        return totalCost;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -294,41 +307,42 @@ export class Tibber {
             this.lastPushTimes[where] = now;
 
             // Publish to MQTT
-            const mqttTopicBase = `${where}/`;
+            this.sendToMQTT(where, 'power', power);
 
-            this.mqttClient.publish(mqttTopicBase + 'power', power);
-            this.mqttClient.publish(
-                mqttTopicBase + 'accumulatedConsumption',
+            this.sendToMQTT(
+                where,
+                'accumulatedConsumption',
                 accumulatedConsumption
             );
-            this.mqttClient.publish(
-                mqttTopicBase + 'accumulatedCost',
-                accumulatedCost
-            );
-            this.mqttClient.publish(
-                mqttTopicBase + 'powerProduction',
+
+            this.sendToMQTT(where, 'accumulatedCost', accumulatedCost);
+            this.sendToMQTT(
+                where,
+                'powerProduction',
                 tibberValidated.data.powerProduction
             );
-            this.mqttClient.publish(
-                mqttTopicBase + 'averagePower',
+            this.sendToMQTT(
+                where,
+                'averagePower',
                 tibberValidated.data.averagePower
             );
-            this.mqttClient.publish(
-                mqttTopicBase + 'maxPower',
-                tibberValidated.data.maxPower
-            );
-            this.mqttClient.publish(
-                mqttTopicBase + 'minPower',
-                tibberValidated.data.minPower
-            );
+            this.sendToMQTT(where, 'maxPower', tibberValidated.data.maxPower);
+            this.sendToMQTT(where, 'minPower', tibberValidated.data.minPower);
             if (tibberValidated.data.powerProduction) {
-                this.mqttClient.publish(
-                    mqttTopicBase + 'production',
+                this.sendToMQTT(
+                    where,
+                    'production',
                     tibberValidated.data.powerProduction
                 );
             }
         } else {
             console.log('Tibber data not valid');
         }
+    }
+
+    private sendToMQTT(where: string, what: string, value: number | string) {
+        // Publish to MQTT
+        const mqttTopicBase = `${where}/`;
+        this.mqttClient.publish(mqttTopicBase + what, value);
     }
 }
