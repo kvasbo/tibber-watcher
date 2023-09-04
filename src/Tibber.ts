@@ -201,13 +201,13 @@ export class Tibber {
 
         const homeUsageThisMonth =
             await this.getMonthlyUsageSoFar(consumptionHome);
-        const homeCostThisMonth = await this.parseUsage(
+        const homeCostToday = await this.parseUsage(
             consumptionHome,
             homeUsageThisMonth
         );
 
         this.sendToMQTT('home', 'usedThisMonth', homeUsageThisMonth);
-        this.sendToMQTT('home', 'costThisMonth', homeCostThisMonth);
+        this.sendToMQTT('home', 'costToday', homeCostToday);
 
         const consumptionCabin = await tibberQueryHome.getConsumption(
             EnergyResolution.HOURLY,
@@ -215,13 +215,13 @@ export class Tibber {
             cabinId
         );
 
-        const cabinThisMonth =
+        const cabinUsedThisMonth =
             await this.getMonthlyUsageSoFar(consumptionCabin);
-        const cabinCost = await this.parseUsage(consumptionCabin, 999999); // No support in cabin
+        const cabinCostToday = await this.parseUsage(consumptionCabin, 999999); // No support in cabin
 
         // Publish to MQTT
-        this.sendToMQTT('cabin', 'costThisMonth', cabinCost);
-        this.sendToMQTT('cabin', 'usedThisMonth', cabinThisMonth);
+        this.sendToMQTT('cabin', 'usedThisMonth', cabinUsedThisMonth);
+        this.sendToMQTT('cabin', 'costToday', cabinCostToday);
         setTimeout(
             () => {
                 this.updateUsage();
@@ -260,7 +260,7 @@ export class Tibber {
 
         // Calculate total cost today (up until start of last hour)
         const totalCost = cost.reduce((acc, cur) => {
-            return acc + cur.priceWithFeesAndVAT;
+            return acc + cur.priceWithFees;
         }, 0);
 
         return totalCost;
