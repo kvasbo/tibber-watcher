@@ -94,15 +94,32 @@ export class Tibber {
     private updatePowerprices() {
         tibberQueryHome.getCurrentEnergyPrice(homeId).then((data) => {
             // Publish to MQTT
+            this.mqttClient.publish('price/home/total', data.total);
+            this.mqttClient.publish('price/home/energy', data.energy);
+            this.mqttClient.publish('price/home/tax', data.tax);
+            this.mqttClient.publish('price/home/level', data.level);
+            // TODO: Remove!
             this.mqttClient.publish('price/total', data.total);
             this.mqttClient.publish('price/energy', data.energy);
             this.mqttClient.publish('price/tax', data.tax);
             this.mqttClient.publish('price/level', data.level);
         });
-        setTimeout(() => {
-            this.updatePowerprices();
-        }, 60000);
+        tibberQueryHome.getCurrentEnergyPrice(cabinId).then((data) => {
+            // Publish to MQTT
+            this.mqttClient.publish('price/cabin/total', data.total);
+            this.mqttClient.publish('price/cabin/energy', data.energy);
+            this.mqttClient.publish('price/cabin/tax', data.tax);
+            this.mqttClient.publish('price/cabin/level', data.level);
+        });
+        setTimeout(
+            () => {
+                this.updatePowerprices();
+            },
+            10 + 60 * 1000 // Only need new prices every ten minutes!
+        );
     }
+
+    private updateUsage() {}
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public parseData(data: TibberData, where: 'home' | 'cabin'): void {

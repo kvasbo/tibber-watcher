@@ -1,4 +1,4 @@
-import mqtt from 'mqtt';
+import * as mqtt from 'mqtt';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -9,10 +9,9 @@ const MQTT_USER = process.env.MQTT_USER as string;
 const MQTT_PASS = process.env.MQTT_PASS as string;
 const MQTT_ROOT_TOPIC = process.env.MQTT_ROOT_TOPIC as string;
 
+const MQTT_HOST = `mqtts://${MQTT_URL}:${MQTT_PORT}`;
+
 const options: mqtt.IClientOptions = {
-    host: MQTT_URL,
-    port: Number(MQTT_PORT),
-    protocol: 'mqtts',
     username: MQTT_USER,
     password: MQTT_PASS,
     clientId: 'tellulf-' + Math.random().toString(16).substring(2, 8),
@@ -23,10 +22,11 @@ export class MqttClient {
 
     // Connect to MQTT broker
     constructor() {
-        this.client = mqtt.connect(options);
+        this.log(`${options.clientId} connecting to ${MQTT_HOST}`);
+        this.client = mqtt.connect(MQTT_HOST, options);
         this.client
             .on('connect', () => {
-                this.log(`${options.clientId} connected to ${options.host}`);
+                this.log(`${options.clientId} connected to ${MQTT_HOST}`);
             })
             .on('error', (error) => {
                 this.log('MQTT Error', error.message);
