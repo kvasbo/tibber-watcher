@@ -14,7 +14,7 @@
     },
     "dependencies": {
         "dotenv": "^16",
-        "mqtt": "^4",
+        "mqtt": "^5",
         "tibber-api": "^5",
         "zod": "^3"
     },
