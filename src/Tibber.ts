@@ -17,6 +17,8 @@ const TibberSubscriptionSchema = z.object({
     maxPowerProduction: z.number().nullable(),
 });
 
+const MIN_PUSH_INTERVAL = 15 * 1000; // 15 seconds
+
 type TibberData = z.infer<typeof TibberSubscriptionSchema>;
 
 const tibberKey: string = process.env.TIBBER_KEY
@@ -71,6 +73,12 @@ const tibberFeedCabin = new TibberFeed(tibberQueryCabin, 5000);
 export class Tibber {
     private mqttClient: MqttClient;
     private lastCabinPower = 0; // Hack to remember last power value
+
+    // Make sure we don't push too often, we don't need every second.
+    private lastPushTimes = {
+        home: 0,
+        cabin: 0,
+    };
 
     // Create Tibber instances and start subscriptions
     public constructor(mqttClient: MqttClient) {
@@ -152,6 +160,15 @@ export class Tibber {
                     power = this.lastCabinPower;
                 }
             }
+
+            // Make sure we don't push too often, we don't need every second.
+            const now = Date.now();
+            if (now - this.lastPushTimes[where] < MIN_PUSH_INTERVAL) {
+                return;
+            }
+
+            this.lastPushTimes[where] = now;
+
             // Publish to MQTT
             const mqttTopicBase = `${where}/`;
 
