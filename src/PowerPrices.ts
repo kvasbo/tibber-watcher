@@ -5,7 +5,8 @@ export interface PowerPriceData {
 }
 
 export class PowerPrices {
-    private static readonly VAT = 1.25;
+    private static readonly SUPPORT_CUTOFF_USAGE = 5000;
+    private static readonly SUPPORT_ENTRY_PRICE = 0.7;
     private static readonly WINTER_NIGHT_OR_WEEKEND_PRICE = 0.2895;
     private static readonly WINTER_DAY_PRICE = 0.352;
     private static readonly SUMMER_NIGHT_OR_WEEKEND_PRICE = 0.373;
@@ -14,31 +15,42 @@ export class PowerPrices {
     // Calculate the current full power price with fees and VAT
     public static getCurrentPrice(
         currentSpotPriceIncVAT: number,
-        when: Date
+        when: Date,
+        usedThisMonthSoFar: number = 0
     ): number {
         const winter = PowerPrices.isItWinterPrice(when);
         const nightOrWeekend = PowerPrices.isItNightOrWeekendPrice(when);
 
+        let price = 0;
         // Not elegant, but hey
         if (winter) {
             if (nightOrWeekend) {
-                return (
+                price =
                     currentSpotPriceIncVAT +
-                    PowerPrices.WINTER_NIGHT_OR_WEEKEND_PRICE
-                );
+                    PowerPrices.WINTER_NIGHT_OR_WEEKEND_PRICE;
             } else {
-                return currentSpotPriceIncVAT + PowerPrices.WINTER_DAY_PRICE;
+                price = currentSpotPriceIncVAT + PowerPrices.WINTER_DAY_PRICE;
             }
         } else {
             if (nightOrWeekend) {
-                return (
+                price =
                     currentSpotPriceIncVAT +
-                    PowerPrices.SUMMER_NIGHT_OR_WEEKEND_PRICE
-                );
+                    PowerPrices.SUMMER_NIGHT_OR_WEEKEND_PRICE;
             } else {
-                return currentSpotPriceIncVAT + PowerPrices.SUMMER_DAY_PRICE;
+                price = currentSpotPriceIncVAT + PowerPrices.SUMMER_DAY_PRICE;
             }
         }
+
+        // If we are under usage threshold and over price thtreshold, we get a discount
+        if (usedThisMonthSoFar < PowerPrices.SUPPORT_CUTOFF_USAGE) {
+            const support = Math.max(
+                0,
+                (price - PowerPrices.SUPPORT_ENTRY_PRICE) * 0.9
+            );
+            price = price - support;
+        }
+
+        return price;
     }
 
     /**

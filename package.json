@@ -14,12 +14,14 @@
     },
     "dependencies": {
         "dotenv": "^16",
+        "luxon": "^3.4.2",
         "mqtt": "^5",
         "tibber-api": "^5",
         "zod": "^3"
     },
     "devDependencies": {
         "@types/node": "^20",
+        "@types/luxon": "*",
         "@typescript-eslint/eslint-plugin": "^6",
         "@typescript-eslint/parser": "^6",
         "eslint": "^8",
