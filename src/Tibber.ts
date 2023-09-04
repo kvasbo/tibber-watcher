@@ -12,6 +12,9 @@ enum EnergyResolution {
     ANNUAL = 'ANNUAL',
 }
 
+// Valid places
+type Place = 'home' | 'cabin';
+
 interface IConsumption {
     homeId?: string;
     from: string;
@@ -22,6 +25,15 @@ interface IConsumption {
     consumptionUnit: string;
     cost: number;
     currency: string;
+}
+
+interface IPrice {
+    homeId?: string;
+    total: number;
+    energy: number;
+    tax: number;
+    startsAt: string;
+    level: string;
 }
 
 const TibberSubscriptionSchema = z.object({
@@ -92,12 +104,22 @@ const tibberQueryCabin = new TibberQuery(configCabin);
 const tibberFeedHome = new TibberFeed(tibberQueryHome, 5000);
 const tibberFeedCabin = new TibberFeed(tibberQueryCabin, 5000);
 
+interface powerUsedThisMonth {
+    home: number;
+    cabin: number;
+}
+
 export class Tibber {
     private mqttClient: MqttClient;
     private lastCabinPower = 0; // Hack to remember last power value
 
     // Make sure we don't push too often, we don't need every second.
     private lastPushTimes = {
+        home: 0,
+        cabin: 0,
+    };
+
+    private powerUsedThisMonth: powerUsedThisMonth = {
         home: 0,
         cabin: 0,
     };
@@ -146,31 +168,41 @@ export class Tibber {
         );
     }
 
-    private updatePowerprices() {
-        tibberQueryHome.getCurrentEnergyPrice(homeId).then((data) => {
-            // Publish to MQTT
-            this.mqttClient.publish('price/home/total', data.total);
-            this.mqttClient.publish('price/home/energy', data.energy);
-            this.mqttClient.publish('price/home/tax', data.tax);
-            this.mqttClient.publish('price/home/level', data.level);
-            // TODO: Remove!
-            this.mqttClient.publish('price/total', data.total);
-            this.mqttClient.publish('price/energy', data.energy);
-            this.mqttClient.publish('price/tax', data.tax);
-            this.mqttClient.publish('price/level', data.level);
-        });
-        tibberQueryHome.getCurrentEnergyPrice(cabinId).then((data) => {
-            // Publish to MQTT
-            this.mqttClient.publish('price/cabin/total', data.total);
-            this.mqttClient.publish('price/cabin/energy', data.energy);
-            this.mqttClient.publish('price/cabin/tax', data.tax);
-            this.mqttClient.publish('price/cabin/level', data.level);
-        });
+    private async updatePowerprices() {
+        // Get and parse home power prices
+        const dataHome: IPrice =
+            await tibberQueryHome.getCurrentEnergyPrice(homeId);
+        this.parsePowerPrices(dataHome, 'home');
+
+        // Get and parse cabin power prices
+        const dataCabin = await tibberQueryHome.getCurrentEnergyPrice(cabinId);
+        this.parsePowerPrices(dataCabin, 'cabin');
+
         setTimeout(
             () => {
                 this.updatePowerprices();
             },
-            60 * 1000 // Only need new prices every ten minutes!
+            60 * 1000 // Every minute
+        );
+    }
+
+    private async parsePowerPrices(data: IPrice, where: Place) {
+        this.sendToMQTT(where, 'total', data.total);
+        this.sendToMQTT(where, 'energy', data.energy);
+        this.sendToMQTT(where, 'tax', data.tax);
+        this.sendToMQTT(where, 'level', data.level);
+
+        const cabinIncludingFees = PowerPrices.getCurrentPrice(
+            data.energy,
+            new Date(),
+            this.powerUsedThisMonth[where]
+        );
+
+        this.sendToMQTT(where, 'energyIncludingFees', cabinIncludingFees);
+        this.sendToMQTT(
+            where,
+            'energyIncludingFeesAndVat',
+            cabinIncludingFees * 1.25
         );
     }
 
@@ -187,7 +219,6 @@ export class Tibber {
                 return acc + cur.consumption;
             }, 0)
         );
-        console.log('Total usage this month: ' + totalUsage);
         return totalUsage;
     }
 
@@ -201,6 +232,7 @@ export class Tibber {
 
         const homeUsageThisMonth =
             await this.getMonthlyUsageSoFar(consumptionHome);
+        this.powerUsedThisMonth.home = homeUsageThisMonth;
         const homeCostToday = await this.parseUsage(
             consumptionHome,
             homeUsageThisMonth
@@ -217,6 +249,8 @@ export class Tibber {
 
         const cabinUsedThisMonth =
             await this.getMonthlyUsageSoFar(consumptionCabin);
+
+        this.powerUsedThisMonth.cabin = cabinUsedThisMonth;
         const cabinCostToday = await this.parseUsage(consumptionCabin, 999999); // No support in cabin
 
         // Publish to MQTT
@@ -266,8 +300,7 @@ export class Tibber {
         return totalCost;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    public parseData(data: TibberData, where: 'home' | 'cabin'): void {
+    public parseData(data: TibberData, where: Place): void {
         const tibberValidated = TibberSubscriptionSchema.safeParse(data);
         if (tibberValidated.success) {
             const accumulatedConsumption =
