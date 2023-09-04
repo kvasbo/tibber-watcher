@@ -170,7 +170,7 @@ export class Tibber {
             () => {
                 this.updatePowerprices();
             },
-            10 + 60 * 1000 // Only need new prices every ten minutes!
+            60 * 1000 // Only need new prices every ten minutes!
         );
     }
 
@@ -226,7 +226,7 @@ export class Tibber {
             () => {
                 this.updateUsage();
             },
-            10 + 60 * 1000 // Only need consumption every ten minutes!
+            60 * 1000 // Only need consumption every ten minutes!
         );
     }
 
