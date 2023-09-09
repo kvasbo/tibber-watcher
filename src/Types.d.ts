@@ -10,6 +10,13 @@ export enum EnergyResolution {
 
 export type Place = 'home' | 'cabin';
 
+export interface Places {
+    [key: string]: {
+        id: string;
+        name: Place;
+    };
+}
+
 export interface PowerStatusForPlace {
     power: number;
     day: {
@@ -30,9 +37,10 @@ export interface PowerStatusForPlace {
     minPowerProduction: number;
     maxPowerProduction: number;
     usageForDay: UsageForDay;
+    prices: PowerPriceDay;
 }
 export interface UsageForDay {
-    [key: hours]: {
+    [key: number]: {
         consumption: number;
         production: number;
         total: number;
@@ -41,39 +49,12 @@ export interface UsageForDay {
 }
 
 export interface PowerPriceDay {
-    [key: hours]: {
+    [key: number]: {
         energy: number;
-        tax: string;
+        tax: number;
         total: number;
     };
 }
-
-// Yeah... I know
-type hours =
-    | 0
-    | 1
-    | 2
-    | 3
-    | 4
-    | 5
-    | 6
-    | 7
-    | 8
-    | 9
-    | 10
-    | 11
-    | 12
-    | 13
-    | 14
-    | 15
-    | 16
-    | 17
-    | 18
-    | 19
-    | 20
-    | 21
-    | 22
-    | 23;
 
 // Hold the current status for a place.
 export interface PowerStatus {
