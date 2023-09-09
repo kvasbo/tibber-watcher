@@ -11,11 +11,17 @@ export enum EnergyResolution {
 export type Place = 'home' | 'cabin';
 
 export interface PowerStatusForPlace {
-    updated: Date;
     power: number;
-    accumulatedConsumption: number;
-    accumulatedProduction: number;
-    accumulatedCost: number;
+    day: {
+        accumulatedConsumption: number;
+        accumulatedProduction: number;
+        accumulatedCost: number;
+    };
+    month: {
+        accumulatedConsumption: number;
+        accumulatedProduction: number;
+        accumulatedCost: number;
+    };
     minPower: number;
     averagePower: number;
     maxPower: number;
@@ -23,7 +29,6 @@ export interface PowerStatusForPlace {
     powerProduction: number;
     minPowerProduction: number;
     maxPowerProduction: number;
-    currentPrice: number;
     usageForDay: UsageForDay;
 }
 export interface UsageForDay {
@@ -32,6 +37,14 @@ export interface UsageForDay {
         production: number;
         total: number;
         price: number;
+    };
+}
+
+export interface PowerPriceDay {
+    [key: hours]: {
+        energy: number;
+        tax: string;
+        total: number;
     };
 }
 

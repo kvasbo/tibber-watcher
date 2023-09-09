@@ -9,6 +9,9 @@ import {
     TibberSubscriptionSchema,
     TibberData,
     Place,
+    PowerPriceDay,
+    PowerStatus,
+    PowerStatusForPlace,
 } from './Types';
 
 const MIN_PUSH_INTERVAL = 15 * 1000; // 15 seconds!
@@ -28,6 +31,11 @@ const cabinId: string = process.env.TIBBER_ID_CABIN
 console.log('Tibber Key: ' + tibberKey);
 console.log('Home ID: ' + homeId);
 console.log('Cabin ID: ' + cabinId);
+
+if (!tibberKey || !homeId || !cabinId) {
+    console.log('Missing Tibber config');
+    process.exit();
+}
 
 // Config object needed when instantiating TibberQuery
 const configBase: IConfig = {
@@ -71,6 +79,16 @@ export class Tibber {
     private mqttClient: MqttClient;
     private lastCabinPower = 0; // Hack to remember last power value
 
+    // New data set
+    private powerPrices: PowerPriceDay[] = []; // Init empty array for power prices
+
+    private status: PowerStatus = {
+        home: structuredClone(statusInitValues),
+        cabin: structuredClone(statusInitValues),
+    };
+
+    // End new data set
+
     // Make sure we don't push too often, we don't need every second.
     private lastPushTimes = {
         home: 0,
@@ -86,10 +104,45 @@ export class Tibber {
     public constructor(mqttClient: MqttClient) {
         this.mqttClient = mqttClient;
 
+        // Run once to get current prices and then every hour on the hour
+        this.updatePrices();
+
+        // console.log(this.status.home);
+
         // Start power price loop
-        this.updatePowerprices();
-        this.updateUsage();
+        // this.updatePowerprices();
+        // this.updateUsage();
         // this.connectToTibber();
+    }
+
+    // New: Get current power prices
+    private async updatePrices() {
+        const prices = await tibberQueryHome.getTodaysEnergyPrices(homeId);
+
+        prices.forEach((p) => {
+            const t = DateTime.fromISO(p.startsAt).setZone('Europe/Oslo');
+            const key = t.hour;
+            this.powerPrices[key] = p;
+        });
+
+        // Run every hour on the hour
+        const d = new Date(),
+            h = new Date(
+                d.getFullYear(),
+                d.getMonth(),
+                d.getDate(),
+                d.getHours() + 1,
+                0,
+                0,
+                0
+            ),
+            e = h.getTime() - d.getTime();
+        if (e > 100) {
+            console.log(
+                'Power prices updated, running again in ' + e / 1000 / 60 + ' m'
+            );
+            setTimeout(this.updatePrices, e);
+        }
     }
 
     /**
@@ -337,3 +390,25 @@ export class Tibber {
         this.mqttClient.publish(mqttTopicBase + what, value);
     }
 }
+
+const statusInitValues: PowerStatusForPlace = {
+    power: 0,
+    day: {
+        accumulatedConsumption: 0,
+        accumulatedProduction: 0,
+        accumulatedCost: 0,
+    },
+    month: {
+        accumulatedConsumption: 0,
+        accumulatedProduction: 0,
+        accumulatedCost: 0,
+    },
+    minPower: 0,
+    averagePower: 0,
+    maxPower: 0,
+    accumulatedReward: 0,
+    powerProduction: 0,
+    minPowerProduction: 0,
+    maxPowerProduction: 0,
+    usageForDay: {},
+};
