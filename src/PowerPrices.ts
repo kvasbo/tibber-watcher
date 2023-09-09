@@ -1,9 +1,3 @@
-export interface PowerPriceData {
-    currentSpotPriceWithVAT: number;
-    currentTotalPriceWithVAT: number;
-    currentFeesWithVAT: number;
-}
-
 export class PowerPrices {
     private static readonly SUPPORT_CUTOFF_USAGE = 5000;
     private static readonly SUPPORT_ENTRY_PRICE = 0.7;

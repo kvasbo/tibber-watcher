@@ -2,58 +2,16 @@ import { TibberFeed, TibberQuery, IConfig } from 'tibber-api';
 import { MqttClient } from './Mqtt';
 import { DateTime } from 'luxon';
 import { PowerPrices } from './PowerPrices';
-import * as z from 'zod';
-
-enum EnergyResolution {
-    HOURLY = 'HOURLY',
-    DAILY = 'DAILY',
-    WEEKLY = 'WEEKLY',
-    MONTHLY = 'MONTHLY',
-    ANNUAL = 'ANNUAL',
-}
-
-// Valid places
-type Place = 'home' | 'cabin';
-
-interface IConsumption {
-    homeId?: string;
-    from: string;
-    to: string;
-    unitPrice: number;
-    unitPriceVAT: number;
-    consumption: number;
-    consumptionUnit: string;
-    cost: number;
-    currency: string;
-}
-
-interface IPrice {
-    homeId?: string;
-    total: number;
-    energy: number;
-    tax: number;
-    startsAt: string;
-    level: string;
-}
-
-const TibberSubscriptionSchema = z.object({
-    timestamp: z.string(),
-    power: z.number(),
-    accumulatedConsumption: z.number(),
-    accumulatedProduction: z.number(),
-    accumulatedCost: z.number(),
-    minPower: z.number(),
-    averagePower: z.number(),
-    maxPower: z.number(),
-    accumulatedReward: z.number().nullable(),
-    powerProduction: z.number().nullable(),
-    minPowerProduction: z.number().nullable(),
-    maxPowerProduction: z.number().nullable(),
-});
+import {
+    EnergyResolution,
+    IConsumption,
+    IPrice,
+    TibberSubscriptionSchema,
+    TibberData,
+    Place,
+} from './Types';
 
 const MIN_PUSH_INTERVAL = 15 * 1000; // 15 seconds!
-
-type TibberData = z.infer<typeof TibberSubscriptionSchema>;
 
 const tibberKey: string = process.env.TIBBER_KEY
     ? process.env.TIBBER_KEY.toString()
@@ -131,7 +89,7 @@ export class Tibber {
         // Start power price loop
         this.updatePowerprices();
         this.updateUsage();
-        this.connectToTibber();
+        // this.connectToTibber();
     }
 
     /**
