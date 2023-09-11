@@ -2,6 +2,7 @@ import { TibberFeed, TibberQuery, IConfig } from 'tibber-api';
 import { MqttClient } from './Mqtt';
 import { DateTime } from 'luxon';
 import { PowerPrices } from './PowerPrices';
+import { usageQuery } from './TibberQueries';
 import {
     EnergyResolution,
     IConsumption,
@@ -42,6 +43,8 @@ const places: Places = {
     home: { id: homeId, name: 'home' },
     cabin: { id: cabinId, name: 'cabin' },
 };
+places[homeId] = places.home;
+places[cabinId] = places.cabin; // Add reverse lookup
 
 // Config object needed when instantiating TibberQuery
 const configBase: IConfig = {
@@ -106,17 +109,17 @@ export class Tibber {
     public constructor(mqttClient: MqttClient) {
         this.mqttClient = mqttClient;
 
-        // Run once to get current prices and then every hour on the hour
-        this.updatePrices();
-
-        // this.updateUsage();
-
-        // console.log(this.status.home);
-
-        // Start power price loop
+        this.initData();
 
         // this.connectToTibber();
         setInterval(() => this.sendToMQTT(), 1000 * PUSH_INTERVAL); // Update MQTT every 15 secs.
+    }
+
+    // Init data that needs to be in place in order to have correct data for later computations
+    private async initData() {
+        await this.updatePrices();
+        await this.updateUsage();
+        console.log('Init data done');
     }
 
     // New: Get current power prices
@@ -141,16 +144,13 @@ export class Tibber {
         const nextHour = DateTime.now()
             .plus({ hours: 1 })
             .startOf('hour')
-            .diff(DateTime.now());
-
-        if (nextHour.milliseconds > 100) {
-            console.log(
-                'Power prices updated, running again in ' +
-                    nextHour.milliseconds / 1000 / 60 +
-                    ' m'
-            );
-            setTimeout(this.updatePrices, nextHour.milliseconds);
-        }
+            .diff(DateTime.now()).milliseconds;
+        setTimeout(this.updatePrices, nextHour);
+        console.log(
+            'Prices updated and new update scheduled in ' +
+                nextHour +
+                ' milliseconds'
+        );
     }
 
     /**
@@ -205,6 +205,34 @@ export class Tibber {
 
     private async updateUsage() {
         const hoursToGet = DateTime.now().day * 24; // Just get the whole month (with a bit of slack)
+
+        const query = usageQuery.replace(
+            /HOURS_TO_GET/g,
+            hoursToGet.toString()
+        );
+        // console.log('Query: ' + query);
+        const data = await tibberQuery.query(query);
+
+        console.log(data.viewer);
+
+        // Run through all homes and get consumption, prices etc.
+        data.viewer.homes.forEach(async (home: any) => {
+            // Find the place
+            const place = places[home.id];
+
+            // Get consumption
+            const consumption = home.consumption.nodes;
+            const monthSoFar = await this.getMonthlyUsageSoFar(consumption);
+            this.status[place.name].month.accumulatedConsumption = monthSoFar;
+            console.log('Parsing data for', place.name);
+            console.log('Month so far', monthSoFar);
+
+            // Get cost
+            const costToday = await this.parseUsage(consumption, monthSoFar);
+            console.log('Cost', costToday);
+        });
+
+        // Deprecated from hereon out
         const consumptionHome = await tibberQuery.getConsumption(
             EnergyResolution.HOURLY,
             hoursToGet,
@@ -213,6 +241,7 @@ export class Tibber {
 
         const homeUsageThisMonth =
             await this.getMonthlyUsageSoFar(consumptionHome);
+
         this.powerUsedThisMonth.home = homeUsageThisMonth;
         const homeCostToday = await this.parseUsage(
             consumptionHome,
