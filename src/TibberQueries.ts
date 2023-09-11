@@ -40,3 +40,46 @@ export const usageQuery = `{
     }
   }
 }`;
+
+export interface usageQueryResponse {
+    viewer: {
+        homes: {
+            id: string;
+            consumption: {
+                nodes: {
+                    from: string;
+                    to: string;
+                    unitPrice: number;
+                    unitPriceVAT: number;
+                    consumption: number;
+                }[];
+            };
+            production: {
+                nodes: {
+                    from: string;
+                    to: string;
+                    unitPrice: number;
+                    unitPriceVAT: number;
+                    production: number;
+                }[];
+            };
+            currentSubscription: {
+                status: string;
+                priceInfo: {
+                    today: {
+                        total: number;
+                        energy: number;
+                        tax: number;
+                        startsAt: string;
+                    }[];
+                    current: {
+                        total: number;
+                        energy: number;
+                        tax: number;
+                        startsAt: string;
+                    };
+                };
+            };
+        }[];
+    };
+}

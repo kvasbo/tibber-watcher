@@ -2,7 +2,7 @@ import { TibberFeed, TibberQuery, IConfig } from 'tibber-api';
 import { MqttClient } from './Mqtt';
 import { DateTime } from 'luxon';
 import { PowerPrices } from './PowerPrices';
-import { usageQuery } from './TibberQueries';
+import { usageQuery, usageQueryResponse } from './TibberQueries';
 import {
     EnergyResolution,
     IConsumption,
@@ -109,48 +109,18 @@ export class Tibber {
     public constructor(mqttClient: MqttClient) {
         this.mqttClient = mqttClient;
 
-        this.initData();
+        this.updateData();
 
         // this.connectToTibber();
+        setInterval(() => this.updateData(), 1000 * 60 * 5); // Update data every five minutes
         setInterval(() => this.sendToMQTT(), 1000 * PUSH_INTERVAL); // Update MQTT every 15 secs.
     }
 
     // Init data that needs to be in place in order to have correct data for later computations
-    private async initData() {
-        await this.updatePrices();
+    private async updateData() {
+        // await this.updatePrices();
         await this.updateUsage();
         console.log('Init data done');
-    }
-
-    // New: Get current power prices
-    private async updatePrices() {
-        for (const place in places) {
-            const placeKey = places[place].name;
-            const prices = await tibberQuery.getTodaysEnergyPrices(
-                places[place].id
-            );
-            prices.forEach((p) => {
-                const t = DateTime.fromISO(p.startsAt).setZone('Europe/Oslo');
-                const key = t.hour;
-                this.status[placeKey].prices[key] = {
-                    energy: p.energy,
-                    tax: p.tax,
-                    total: p.total,
-                };
-            });
-        }
-
-        // Luxon is awesome!
-        const nextHour = DateTime.now()
-            .plus({ hours: 1 })
-            .startOf('hour')
-            .diff(DateTime.now()).milliseconds;
-        setTimeout(this.updatePrices, nextHour);
-        console.log(
-            'Prices updated and new update scheduled in ' +
-                nextHour +
-                ' milliseconds'
-        );
     }
 
     /**
@@ -203,6 +173,7 @@ export class Tibber {
         return totalUsage;
     }
 
+    // The new nice all-in-one-update function
     private async updateUsage() {
         const hoursToGet = DateTime.now().day * 24; // Just get the whole month (with a bit of slack)
 
@@ -210,26 +181,45 @@ export class Tibber {
             /HOURS_TO_GET/g,
             hoursToGet.toString()
         );
-        // console.log('Query: ' + query);
-        const data = await tibberQuery.query(query);
 
-        console.log(data.viewer);
+        const data: usageQueryResponse = await tibberQuery.query(query);
 
         // Run through all homes and get consumption, prices etc.
-        data.viewer.homes.forEach(async (home: any) => {
+        data.viewer.homes.forEach(async (home) => {
             // Find the place
             const place = places[home.id];
 
+            // Update price data
+            const priceData = home.currentSubscription.priceInfo.today;
+            priceData.forEach((p) => {
+                const t = DateTime.fromISO(p.startsAt).setZone('Europe/Oslo');
+                const key = t.hour;
+                this.status[place.name].prices[key] = {
+                    energy: p.energy,
+                    tax: p.tax,
+                    total: p.total,
+                };
+            });
+
             // Get consumption
             const consumption = home.consumption.nodes;
-            const monthSoFar = await this.getMonthlyUsageSoFar(consumption);
+            const monthSoFar = await this.getMonthlyUsageSoFar(
+                consumption as IConsumption[]
+            );
             this.status[place.name].month.accumulatedConsumption = monthSoFar;
             console.log('Parsing data for', place.name);
             console.log('Month so far', monthSoFar);
 
             // Get cost
-            const costToday = await this.parseUsage(consumption, monthSoFar);
+            const costToday = await this.parseUsage(
+                consumption as IConsumption[],
+                monthSoFar
+            );
             console.log('Cost', costToday);
+
+            // Get prices
+            const prices = home.currentSubscription.priceInfo.today;
+            console.log(prices.length);
         });
 
         // Deprecated from hereon out
