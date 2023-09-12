@@ -80,29 +80,14 @@ const tibberQuery = new TibberQuery(configBase);
 const tibberFeedHome = new TibberFeed(tibberQueryHome, 5000);
 const tibberFeedCabin = new TibberFeed(tibberQueryCabin, 5000);
 
-interface powerUsedThisMonth {
-    home: number;
-    cabin: number;
-}
-
 export class Tibber {
     private mqttClient: MqttClient;
-    private lastCabinPower = 0; // Hack to remember last power value
-
-    // New data set
-    private powerPrices: PowerPriceDay[] = []; // Init empty array for power prices
 
     // The new structure for everything!
+    private powerPrices: PowerPriceDay[] = []; // Init empty array for power prices
     private status: PowerStatus = {
         home: structuredClone(statusInitValues),
         cabin: structuredClone(statusInitValues),
-    };
-
-    // End new data set
-
-    private powerUsedThisMonth: powerUsedThisMonth = {
-        home: 0,
-        cabin: 0,
     };
 
     // Create Tibber instances and start subscriptions
@@ -110,6 +95,7 @@ export class Tibber {
         this.mqttClient = mqttClient;
 
         this.updateData();
+        this.connectToTibber();
 
         // this.connectToTibber();
         setInterval(() => this.updateData(), 1000 * 60 * 5); // Update data every five minutes
@@ -118,7 +104,6 @@ export class Tibber {
 
     // Init data that needs to be in place in order to have correct data for later computations
     private async updateData() {
-        // await this.updatePrices();
         await this.updateUsage();
         console.log('Init data done');
     }
@@ -133,7 +118,8 @@ export class Tibber {
                     console.log('Tibber home initiated');
                 });
                 tibberFeedHome.on('data', (data) => {
-                    this.parseData(data, 'home');
+                    // this.parseData(data, 'home');
+                    console.log(data);
                 });
                 tibberFeedHome.on('error', (error) => {
                     console.log('Tibber home error: ' + error);
@@ -150,15 +136,94 @@ export class Tibber {
                     console.log('Tibber cabin error: ' + error);
                 });
                 tibberFeedCabin.on('data', (data) => {
-                    this.parseData(data, 'cabin');
+                    console.log(data);
+                    //this.parseData(data, 'cabin');
                 });
             },
             Math.random() * 1000 * 15 + 4000
         );
     }
 
-    private async getMonthlyUsageSoFar(
-        usageData: IConsumption[]
+    // The new nice all-in-one-update function
+    private async updateUsage() {
+        // Just get the whole month (with a bit of slack)
+        const hoursToGet = DateTime.now().day * 24;
+
+        // Create the query
+        const query = usageQuery.replace(
+            /HOURS_TO_GET/g,
+            hoursToGet.toString()
+        );
+
+        // Get the data
+        const data: usageQueryResponse = await tibberQuery.query(query);
+
+        // Run through all homes and get consumption, prices etc.
+        data.viewer.homes.forEach(async (home) => {
+            // Find the place
+            const place = places[home.id];
+
+            // Get consumption
+            const consumption = home.consumption.nodes;
+            const monthSoFar = await this.calculateUsageForPeriod(
+                consumption as IConsumption[],
+                DateTime.now().startOf('month').toJSDate()
+            );
+            this.status[place.name].month.accumulatedConsumption = monthSoFar;
+            console.log('Parsing data for', place.name);
+            console.log('Month so far', monthSoFar);
+
+            // Update price data
+            const priceData = home.currentSubscription.priceInfo.today;
+            // Hack as cabins have no support
+            const usageForCalc = place.name === 'cabin' ? 999999 : monthSoFar;
+
+            priceData.forEach((p) => {
+                const t = DateTime.fromISO(p.startsAt).setZone('Europe/Oslo');
+                const d = t.toJSDate();
+                const key = t.hour;
+                this.status[place.name].prices[key] = {
+                    energy: p.energy,
+                    tax: p.tax,
+                    total: p.total,
+                    transportCost: PowerPrices.getCurrentTransportCost(d),
+                    energyAfterSupport: PowerPrices.getCurrentPriceAfterSupport(
+                        p.energy,
+                        usageForCalc // Hack as cabins have no support
+                    ),
+                };
+            });
+
+            // Calculate cost
+            const todayStart = DateTime.now()
+                .setZone('Europe/Oslo')
+                .startOf('day')
+                .toJSDate();
+            const monthStart = DateTime.now()
+                .setZone('Europe/Oslo')
+                .startOf('month')
+                .toJSDate();
+            const costToday = this.calculateCosts(
+                consumption as IConsumption[],
+                todayStart
+            );
+            const costMonth = this.calculateCosts(
+                consumption as IConsumption[],
+                monthStart
+            );
+            console.log('Cost', place.name, costToday, costMonth);
+        });
+    }
+
+    /**
+     *
+     * @param usageData
+     * @returns
+     */
+    private async calculateUsageForPeriod(
+        usageData: IConsumption[],
+        from: Date,
+        to: Date = new Date()
     ): Promise<number> {
         const startOfMonth = DateTime.now().startOf('month');
         const thisMonth = usageData.filter((data) => {
@@ -173,126 +238,38 @@ export class Tibber {
         return totalUsage;
     }
 
-    // The new nice all-in-one-update function
-    private async updateUsage() {
-        const hoursToGet = DateTime.now().day * 24; // Just get the whole month (with a bit of slack)
-
-        const query = usageQuery.replace(
-            /HOURS_TO_GET/g,
-            hoursToGet.toString()
-        );
-
-        const data: usageQueryResponse = await tibberQuery.query(query);
-
-        // Run through all homes and get consumption, prices etc.
-        data.viewer.homes.forEach(async (home) => {
-            // Find the place
-            const place = places[home.id];
-
-            // Update price data
-            const priceData = home.currentSubscription.priceInfo.today;
-            priceData.forEach((p) => {
-                const t = DateTime.fromISO(p.startsAt).setZone('Europe/Oslo');
-                const key = t.hour;
-                this.status[place.name].prices[key] = {
-                    energy: p.energy,
-                    tax: p.tax,
-                    total: p.total,
-                };
-            });
-
-            // Get consumption
-            const consumption = home.consumption.nodes;
-            const monthSoFar = await this.getMonthlyUsageSoFar(
-                consumption as IConsumption[]
-            );
-            this.status[place.name].month.accumulatedConsumption = monthSoFar;
-            console.log('Parsing data for', place.name);
-            console.log('Month so far', monthSoFar);
-
-            // Get cost
-            const costToday = await this.parseUsage(
-                consumption as IConsumption[],
-                monthSoFar
-            );
-            console.log('Cost', costToday);
-
-            // Get prices
-            const prices = home.currentSubscription.priceInfo.today;
-            console.log(prices.length);
-        });
-
-        // Deprecated from hereon out
-        const consumptionHome = await tibberQuery.getConsumption(
-            EnergyResolution.HOURLY,
-            hoursToGet,
-            homeId
-        );
-
-        const homeUsageThisMonth =
-            await this.getMonthlyUsageSoFar(consumptionHome);
-
-        this.powerUsedThisMonth.home = homeUsageThisMonth;
-        const homeCostToday = await this.parseUsage(
-            consumptionHome,
-            homeUsageThisMonth
-        );
-
-        const consumptionCabin = await tibberQuery.getConsumption(
-            EnergyResolution.HOURLY,
-            hoursToGet,
-            cabinId
-        );
-
-        const cabinUsedThisMonth =
-            await this.getMonthlyUsageSoFar(consumptionCabin);
-
-        this.powerUsedThisMonth.cabin = cabinUsedThisMonth;
-        const cabinCostToday = await this.parseUsage(consumptionCabin, 999999); // No support in cabin
-        setTimeout(
-            () => {
-                this.updateUsage();
-            },
-            60 * 1000 // Only need consumption every ten minutes!
-        );
-    }
-
-    // Parse usage data and find actual cost.
-    private async parseUsage(
+    /**
+     * Calculates the cost for a given period
+     * @param usageData Consumption data
+     * @param from Start time
+     * @param to  End time
+     * @returns Total cost
+     */
+    private calculateCosts(
         usageData: IConsumption[],
-        usedThisMonthSoFar: number
-    ): Promise<number> {
-        // If in cabin, no support!
-        const startOfDay = DateTime.now().setZone('Europe/Oslo').startOf('day');
-        // Filter data to only today
-        const today = usageData.filter((data) => {
-            const date = DateTime.fromISO(data.from).setZone('Europe/Oslo');
-            return date >= startOfDay;
-        });
-        const cost = today.map((data) => {
+        from: Date,
+        to: Date = new Date()
+    ): number {
+        // Filter data to only after given date
+        const filtered = usageData.filter((data) => {
             const date = DateTime.fromISO(data.from)
                 .setZone('Europe/Oslo')
                 .toJSDate();
-            const price = PowerPrices.getCurrentPrice(
-                data.unitPrice,
-                date,
-                usedThisMonthSoFar
-            );
-            return {
-                ...data,
-                priceWithFees: price,
-                priceWithFeesAndVAT: price * 1.25,
-            };
+            return date >= from && date <= to;
         });
-
-        // Calculate total cost today (up until start of last hour)
-        const totalCost = cost.reduce((acc, cur) => {
-            return acc + cur.priceWithFees;
+        // Calculate total cost
+        const totalCost = filtered.reduce((acc, cur) => {
+            if (!cur.consumption) return acc;
+            return acc + cur.unitPrice * cur.consumption;
         }, 0);
-
         return totalCost;
     }
 
+    /**
+     * Parse subscribtion data
+     * @param data
+     * @param where
+     */
     public parseData(data: TibberData, where: Place): void {
         const tibberValidated = TibberSubscriptionSchema.safeParse(data);
         if (tibberValidated.success) {
@@ -315,17 +292,22 @@ export class Tibber {
                     tibberValidated.data.powerProduction !== null
                 ) {
                     power = tibberValidated.data.powerProduction * -1;
-                    this.lastCabinPower = power;
+                    // this.lastCabinPower = power;
                 } else if (
                     tibberValidated.data.power === 0 &&
                     tibberValidated.data.powerProduction === null
                 ) {
-                    power = this.lastCabinPower;
+                    // power = this.lastCabinPower;
                 }
             }
         } else {
             console.log('Tibber data not valid');
         }
+    }
+
+    // For debugging
+    public getDataSet() {
+        return this.status;
     }
 
     private sendToMQTT() {

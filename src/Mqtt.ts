@@ -54,6 +54,6 @@ export class MqttClient {
     public log(message: string, value: number | string | undefined = '') {
         const d = new Date();
         const t = d.toLocaleString('nb-NO', { timeZone: 'Europe/Oslo' });
-        console.log(t, 'MQTT ' + message, value);
+        // console.log(t, 'MQTT ' + message, value);
     }
 }

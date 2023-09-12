@@ -6,9 +6,42 @@ export class PowerPrices {
     private static readonly SUMMER_NIGHT_OR_WEEKEND_PRICE = 0.373;
     private static readonly SUMMER_DAY_PRICE = 0.4355;
 
+    public static getCurrentTransportCost(when: Date) {
+        const winter = PowerPrices.isItWinterPrice(when);
+        const nightOrWeekend = PowerPrices.isItNightOrWeekendPrice(when);
+        if (winter) {
+            if (nightOrWeekend) {
+                return PowerPrices.WINTER_NIGHT_OR_WEEKEND_PRICE;
+            } else {
+                return PowerPrices.WINTER_DAY_PRICE;
+            }
+        } else {
+            if (nightOrWeekend) {
+                return PowerPrices.SUMMER_NIGHT_OR_WEEKEND_PRICE;
+            } else {
+                return PowerPrices.SUMMER_DAY_PRICE;
+            }
+        }
+    }
+
+    public static getCurrentPriceAfterSupport(
+        price: number,
+        usedThisMonthSoFar: number = 0
+    ): number {
+        // If we are under usage threshold and over price thtreshold, we get a discount
+        if (
+            usedThisMonthSoFar < PowerPrices.SUPPORT_CUTOFF_USAGE &&
+            price > PowerPrices.SUPPORT_ENTRY_PRICE
+        ) {
+            const support = (price - PowerPrices.SUPPORT_ENTRY_PRICE) * 0.9;
+            price = price - support;
+        }
+        return price;
+    }
+
     // Calculate the current full power price with fees and VAT
     public static getCurrentPrice(
-        currentSpotPriceIncVAT: number,
+        currentSpotPriceExVAT: number,
         when: Date,
         usedThisMonthSoFar: number = 0
     ): number {
@@ -20,18 +53,18 @@ export class PowerPrices {
         if (winter) {
             if (nightOrWeekend) {
                 price =
-                    currentSpotPriceIncVAT +
+                    currentSpotPriceExVAT +
                     PowerPrices.WINTER_NIGHT_OR_WEEKEND_PRICE;
             } else {
-                price = currentSpotPriceIncVAT + PowerPrices.WINTER_DAY_PRICE;
+                price = currentSpotPriceExVAT + PowerPrices.WINTER_DAY_PRICE;
             }
         } else {
             if (nightOrWeekend) {
                 price =
-                    currentSpotPriceIncVAT +
+                    currentSpotPriceExVAT +
                     PowerPrices.SUMMER_NIGHT_OR_WEEKEND_PRICE;
             } else {
-                price = currentSpotPriceIncVAT + PowerPrices.SUMMER_DAY_PRICE;
+                price = currentSpotPriceExVAT + PowerPrices.SUMMER_DAY_PRICE;
             }
         }
 

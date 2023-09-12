@@ -53,6 +53,8 @@ export interface PowerPriceDay {
         energy: number;
         tax: number;
         total: number;
+        transportCost: number;
+        energyAfterSupport: number;
     };
 }
 
