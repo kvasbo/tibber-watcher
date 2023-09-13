@@ -1,4 +1,5 @@
 import { TibberFeed, TibberQuery, IConfig } from 'tibber-api';
+import * as z from 'zod';
 import { MqttClient } from './Mqtt';
 import { DateTime } from 'luxon';
 import { PowerPrices } from './PowerPrices';
@@ -7,14 +8,29 @@ import {
     EnergyResolution,
     IConsumption,
     IPrice,
-    TibberSubscriptionSchema,
-    TibberData,
     Place,
     PowerPriceDay,
     PowerStatus,
     PowerStatusForPlace,
     Places,
 } from './Types';
+
+const TibberSubscriptionSchema = z.object({
+    timestamp: z.string(),
+    power: z.number(),
+    accumulatedConsumption: z.number(),
+    accumulatedProduction: z.number(),
+    accumulatedCost: z.number(),
+    minPower: z.number(),
+    averagePower: z.number(),
+    maxPower: z.number(),
+    accumulatedReward: z.number().nullable(),
+    powerProduction: z.number().nullable(),
+    minPowerProduction: z.number().nullable(),
+    maxPowerProduction: z.number().nullable(),
+});
+
+export type TibberData = z.infer<typeof TibberSubscriptionSchema>;
 
 const PUSH_INTERVAL = 15; // 15 seconds!
 
@@ -77,11 +93,12 @@ const tibberQueryHome = new TibberQuery(configHome);
 const tibberQueryCabin = new TibberQuery(configCabin);
 const tibberQuery = new TibberQuery(configBase);
 
-const tibberFeedHome = new TibberFeed(tibberQueryHome, 5000);
-const tibberFeedCabin = new TibberFeed(tibberQueryCabin, 5000);
+const tibberFeedHome = new TibberFeed(tibberQueryHome);
+const tibberFeedCabin = new TibberFeed(tibberQueryCabin);
 
 export class Tibber {
     private mqttClient: MqttClient;
+    private lastCabinPower: number = 0; // Hack to handle intermittent power production data
 
     // The new structure for everything!
     private powerPrices: PowerPriceDay[] = []; // Init empty array for power prices
@@ -111,37 +128,21 @@ export class Tibber {
     /**
      * Connect to Tibber with a delay to avoid hammering the API
      */
-    private connectToTibber() {
-        setTimeout(
-            () => {
-                tibberFeedHome.connect().then(() => {
-                    console.log('Tibber home initiated');
-                });
-                tibberFeedHome.on('data', (data) => {
-                    // this.parseData(data, 'home');
-                    console.log(data);
-                });
-                tibberFeedHome.on('error', (error) => {
-                    console.log('Tibber home error: ' + error);
-                });
-            },
-            Math.random() * 1000 * 15 + 4000
-        );
-        setTimeout(
-            () => {
-                tibberFeedCabin.connect().then(() => {
-                    console.log('Tibber cabin initiated');
-                });
-                tibberFeedCabin.on('error', (error) => {
-                    console.log('Tibber cabin error: ' + error);
-                });
-                tibberFeedCabin.on('data', (data) => {
-                    console.log(data);
-                    //this.parseData(data, 'cabin');
-                });
-            },
-            Math.random() * 1000 * 15 + 4000
-        );
+    private async connectToTibber() {
+        setTimeout(async () => {
+            tibberFeedHome.on('data', (data) => {
+                this.parseRealtimeData(data, 'home');
+            });
+            await tibberFeedHome.connect();
+            console.log('Tibber home initiated');
+        }, Math.random() * 5000);
+        setTimeout(async () => {
+            tibberFeedCabin.on('data', (data) => {
+                this.parseRealtimeData(data, 'cabin');
+            });
+            await tibberFeedCabin.connect();
+            console.log('Tibber cabin initiated');
+        }, Math.random() * 5000);
     }
 
     // The new nice all-in-one-update function
@@ -270,7 +271,7 @@ export class Tibber {
      * @param data
      * @param where
      */
-    public parseData(data: TibberData, where: Place): void {
+    public parseRealtimeData(data: TibberData, where: Place): void {
         const tibberValidated = TibberSubscriptionSchema.safeParse(data);
         if (tibberValidated.success) {
             const accumulatedConsumption =
@@ -283,7 +284,7 @@ export class Tibber {
                     : tibberValidated.data.accumulatedCost -
                       tibberValidated.data.accumulatedReward;
 
-            // Subtract production from power usage
+            // Subtract production from power usage. If production is null, use last known value
             let power = tibberValidated.data.power;
             if (where === 'cabin') {
                 // Hack to remember last power value
@@ -292,14 +293,22 @@ export class Tibber {
                     tibberValidated.data.powerProduction !== null
                 ) {
                     power = tibberValidated.data.powerProduction * -1;
-                    // this.lastCabinPower = power;
+                    this.lastCabinPower = power;
                 } else if (
                     tibberValidated.data.power === 0 &&
                     tibberValidated.data.powerProduction === null
                 ) {
-                    // power = this.lastCabinPower;
+                    power = this.lastCabinPower;
                 }
             }
+
+            // Update the status object
+            this.status[where].power = power;
+            this.status[where].day.accumulatedConsumption =
+                accumulatedConsumption;
+            this.status[where].day.accumulatedCost = accumulatedCost; // TODO: This is not correct, should include fees. However, fixing it is not trivial
+            this.status[where].day.accumulatedProduction =
+                tibberValidated.data.accumulatedProduction;
         } else {
             console.log('Tibber data not valid');
         }
