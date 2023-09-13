@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+
 export enum EnergyResolution {
     HOURLY = 'HOURLY',
     DAILY = 'DAILY',
