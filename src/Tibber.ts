@@ -5,9 +5,7 @@ import { DateTime } from 'luxon';
 import { PowerPrices } from './PowerPrices';
 import { usageQuery, usageQueryResponse } from './TibberQueries';
 import {
-    EnergyResolution,
     IConsumption,
-    IPrice,
     Place,
     PowerPriceDay,
     PowerStatus,
@@ -226,10 +224,11 @@ export class Tibber {
         from: Date,
         to: Date = new Date()
     ): Promise<number> {
-        const startOfMonth = DateTime.now().startOf('month');
+        const fromDate = DateTime.fromJSDate(from);
+        const toDate = DateTime.fromJSDate(to);
         const thisMonth = usageData.filter((data) => {
             const date = DateTime.fromISO(data.from);
-            return date >= startOfMonth;
+            return date >= fromDate && date <= toDate;
         });
         const totalUsage = Math.round(
             thisMonth.reduce((acc, cur) => {
