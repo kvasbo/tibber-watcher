@@ -7,7 +7,6 @@ import { usageQuery, usageQueryResponse } from './TibberQueries';
 import {
     IConsumption,
     Place,
-    PowerPriceDay,
     PowerStatus,
     PowerStatusForPlace,
     Places,
