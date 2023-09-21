@@ -99,7 +99,6 @@ export class Tibber {
     private lastCabinPower: number = 0; // Hack to handle intermittent power production data
 
     // The new structure for everything!
-    private powerPrices: PowerPriceDay[] = []; // Init empty array for power prices
     private status: PowerStatus = {
         home: structuredClone(statusInitValues),
         cabin: structuredClone(statusInitValues),

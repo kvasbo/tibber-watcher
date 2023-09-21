@@ -15,6 +15,7 @@ const options: mqtt.IClientOptions = {
     username: MQTT_USER,
     password: MQTT_PASS,
     clientId: 'tellulf-' + Math.random().toString(16).substring(2, 8),
+    rejectUnauthorized: false,
 };
 
 export class MqttClient {
