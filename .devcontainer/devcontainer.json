@@ -3,12 +3,14 @@
   "forwardPorts": [
     3000
   ],
+  "features": {
+    "ghcr.io/shyim/devcontainers-features/bun:0": {}
+  },
   "portsAttributes": {
     "3000": {
       "label": "Application port"
     }
   },
-  "name": "Tellulf v6",
   "customizations": {
     "vscode": {
       "extensions": [
