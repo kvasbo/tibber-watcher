@@ -40,6 +40,7 @@ export interface PowerStatusForPlace {
     usageForTodayLastHourSeen: number; // To be used for figuring out usage last hour by subtracting realtime from this value.
     usageForTodayUpToThisHour: number; // To be used for figuring out usage last hour by subtracting realtime from this value.
     prices: PowerPriceDay;
+    currentPrice: PowerPrice;
 }
 export interface UsageForDay {
     [key: number]: {
@@ -52,13 +53,15 @@ export interface UsageForDay {
 }
 
 export interface PowerPriceDay {
-    [key: number]: {
-        energy: number;
-        tax: number;
-        transportCost: number;
-        energyAfterSupport: number;
-        totalAfterSupport: number;
-    };
+    [key: number]: PowerPrice;
+}
+
+export interface PowerPrice {
+    energy: number;
+    tax: number;
+    transportCost: number;
+    energyAfterSupport: number;
+    totalAfterSupport: number;
 }
 
 // Hold the current status for a place.

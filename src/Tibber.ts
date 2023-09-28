@@ -145,6 +145,7 @@ export class Tibber {
     private async updateUsage() {
         // Just get the whole month (with a bit of slack)
         const hoursToGet = DateTime.now().day * 24;
+        const currentHour = DateTime.now().hour;
 
         // Create the query
         const query = usageQuery.replace(
@@ -233,6 +234,10 @@ export class Tibber {
                     energyIncVat: energyCost,
                 };
             });
+
+            // Update current price
+            this.status[place.name].currentPrice =
+                this.status[place.name].prices[currentHour];
         });
     }
 
@@ -401,4 +406,11 @@ const statusInitValues: PowerStatusForPlace = {
     usageForTodayLastHourSeen: 0,
     usageForTodayUpToThisHour: 0,
     prices: {},
+    currentPrice: {
+        energy: 0,
+        tax: 0,
+        transportCost: 0,
+        energyAfterSupport: 0,
+        totalAfterSupport: 0,
+    },
 };
