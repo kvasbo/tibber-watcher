@@ -10,7 +10,13 @@ const t = new Tibber(mqttClient);
 
 app.get('/', (req, res) => {
     const data = t.getDataSet();
-    res.send(JSON.stringify(data, null, '  '));
+    res.send(
+        `<html><body><pre><code>${JSON.stringify(
+            data,
+            null,
+            '  '
+        )}</code></pre></body></html>`
+    );
 });
 
 app.listen(3000, () => {

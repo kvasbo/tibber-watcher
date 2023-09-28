@@ -39,11 +39,14 @@ export class MqttClient {
      * @param topic
      * @param message
      */
-    public publish(topic: string, message: string | number | null | undefined) {
+    public async publish(
+        topic: string,
+        message: string | number | null | undefined
+    ) {
         if (message !== null && message !== undefined) {
             const fullTopic = MQTT_ROOT_TOPIC + '/' + topic;
             this.client.publish(fullTopic, message.toString());
-            this.log(fullTopic, message);
+            this.log(`Publshed to ${fullTopic}`);
         }
     }
 
@@ -55,6 +58,6 @@ export class MqttClient {
     public log(message: string, value: number | string | undefined = '') {
         const d = new Date();
         const t = d.toLocaleString('nb-NO', { timeZone: 'Europe/Oslo' });
-        console.log(t, 'MQTT ' + message, value);
+        console.info(t, 'MQTT ' + message, value);
     }
 }

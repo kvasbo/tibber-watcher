@@ -170,6 +170,15 @@ export class Tibber {
             console.log('Parsing data for', place.name);
             console.log('Month so far', monthSoFar);
 
+            // Get consumption for today up to last hour
+            // TODO: This is not correct, as it will not include the last hour. Fix it!
+            const todaySoFar = await this.calculateUsageForPeriod(
+                consumption as IConsumption[],
+                DateTime.now().startOf('day').toJSDate(),
+                DateTime.now().startOf('hour').toJSDate()
+            );
+            this.status[place.name].usageForTodayUpToThisHour = todaySoFar;
+
             // Update price data
             const priceData = home.currentSubscription.priceInfo.today;
             // Hack as cabins have no support
@@ -179,35 +188,65 @@ export class Tibber {
                 const t = DateTime.fromISO(p.startsAt).setZone('Europe/Oslo');
                 const d = t.toJSDate();
                 const key = t.hour;
+                const transportCost = PowerPrices.getCurrentTransportCost(d);
+                const energyAfterSupport =
+                    PowerPrices.getCurrentPriceAfterSupport(
+                        p.energy,
+                        usageForCalc // Hack as cabins have no support
+                    ) + p.tax;
+                const totalAfterSupport = energyAfterSupport + transportCost;
                 this.status[place.name].prices[key] = {
                     energy: p.energy,
                     tax: p.tax,
-                    total: p.total,
-                    transportCost: PowerPrices.getCurrentTransportCost(d),
-                    energyAfterSupport: PowerPrices.getCurrentPriceAfterSupport(
-                        p.energy,
-                        usageForCalc // Hack as cabins have no support
-                    ),
+                    transportCost: transportCost,
+                    energyAfterSupport: energyAfterSupport, // Energy plus tax minus support
+                    totalAfterSupport: totalAfterSupport, // What we actually pay
                 };
             });
 
             // Calculate cost
             const todayStart = DateTime.now()
                 .setZone('Europe/Oslo')
-                .startOf('day')
-                .toJSDate();
+                .startOf('day');
+            const todayStartJs = todayStart.toJSDate();
             const monthStart = DateTime.now()
                 .setZone('Europe/Oslo')
                 .startOf('month')
                 .toJSDate();
             const costToday = this.calculateCosts(
                 consumption as IConsumption[],
-                todayStart
+                todayStartJs
             );
             const costMonth = this.calculateCosts(
                 consumption as IConsumption[],
                 monthStart
             );
+
+            // Get usage for the day, by the hour
+            const todayUsage = consumption.filter((data) => {
+                const date = DateTime.fromISO(data.from).setZone('Europe/Oslo');
+                return date.hasSame(todayStart, 'day');
+            });
+
+            const lastSeen = this.findLatestStartTimeInDataSet(consumption);
+            this.status[place.name].usageForTodayLastHourSeen = lastSeen.hour;
+
+            todayUsage.forEach((data) => {
+                const date = DateTime.fromISO(data.from).setZone('Europe/Oslo');
+                const hour = date.hour;
+                const usage = data.consumption;
+                const priceData = this.status[place.name].prices[hour];
+                const energyCost = priceData.energyAfterSupport * usage;
+                const transportCost = priceData.transportCost * usage;
+                const totalCost = energyCost + transportCost;
+                this.status[place.name].usageForDay[hour] = {
+                    consumption: usage,
+                    totalIncVat: totalCost,
+                    transportIncVat: transportCost,
+                    energyIncVat: energyCost,
+                };
+            });
+
             console.log('Cost', place.name, costToday, costMonth);
         });
     }
@@ -261,6 +300,18 @@ export class Tibber {
             return acc + cur.unitPrice * cur.consumption;
         }, 0);
         return totalCost;
+    }
+
+    /**
+     * Find the latest point in a data set as defined by its starting time
+     */
+    private findLatestStartTimeInDataSet(data: { from: string }[]): DateTime {
+        const sorted = data.sort((a, b) => {
+            const aDate = DateTime.fromISO(a.from);
+            const bDate = DateTime.fromISO(b.from);
+            return aDate > bDate ? -1 : 1;
+        });
+        return DateTime.fromISO(sorted[0].from).setZone('Europe/Oslo');
     }
 
     /**
@@ -342,5 +393,7 @@ const statusInitValues: PowerStatusForPlace = {
     minPowerProduction: 0,
     maxPowerProduction: 0,
     usageForDay: {},
+    usageForTodayLastHourSeen: 0,
+    usageForTodayUpToThisHour: 0,
     prices: {},
 };
