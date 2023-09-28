@@ -208,19 +208,6 @@ export class Tibber {
             const todayStart = DateTime.now()
                 .setZone('Europe/Oslo')
                 .startOf('day');
-            const todayStartJs = todayStart.toJSDate();
-            const monthStart = DateTime.now()
-                .setZone('Europe/Oslo')
-                .startOf('month')
-                .toJSDate();
-            const costToday = this.calculateCosts(
-                consumption as IConsumption[],
-                todayStartJs
-            );
-            const costMonth = this.calculateCosts(
-                consumption as IConsumption[],
-                monthStart
-            );
 
             // Get usage for the day, by the hour
             const todayUsage = consumption.filter((data) => {
@@ -246,8 +233,6 @@ export class Tibber {
                     energyIncVat: energyCost,
                 };
             });
-
-            console.log('Cost', place.name, costToday, costMonth);
         });
     }
 
@@ -276,30 +261,50 @@ export class Tibber {
     }
 
     /**
-     * Calculates the cost for a given period
-     * @param usageData Consumption data
-     * @param from Start time
-     * @param to  End time
-     * @returns Total cost
+     * Try to calculate actual spend so far today by looking at data up to last hour and then adding realtime data.
+     * Not exact!
      */
-    private calculateCosts(
-        usageData: IConsumption[],
-        from: Date,
-        to: Date = new Date()
-    ): number {
-        // Filter data to only after given date
-        const filtered = usageData.filter((data) => {
-            const date = DateTime.fromISO(data.from)
-                .setZone('Europe/Oslo')
-                .toJSDate();
-            return date >= from && date <= to;
-        });
-        // Calculate total cost
-        const totalCost = filtered.reduce((acc, cur) => {
-            if (!cur.consumption) return acc;
-            return acc + cur.unitPrice * cur.consumption;
+    private calculateAccumulatedCostForDay(
+        realtime: TibberData,
+        where: Place
+    ): { total: number } {
+        // Find difference between realtime data and today up to last hour
+        const unAccountedFor =
+            realtime.accumulatedConsumption -
+            this.status[where].usageForTodayUpToThisHour;
+
+        // Find cost and usage for today up until now
+        const properSumsTodaySoFar = this.getSumsForToday(where);
+        const prices = this.status[where].prices[DateTime.now().hour];
+
+        const estimatedTotalUnaccounted =
+            unAccountedFor * prices.totalAfterSupport;
+
+        return {
+            total:
+                estimatedTotalUnaccounted +
+                properSumsTodaySoFar.accumulatedCost,
+        };
+    }
+
+    /**
+     * Helper to sum up usage and cost for today
+     */
+    private getSumsForToday(where: Place): {
+        accumulatedConsumption: number;
+        accumulatedCost: number;
+    } {
+        const hours = Object.values(this.status[where].usageForDay);
+        const consumption = hours.reduce((acc, cur) => {
+            return acc + cur.consumption * 1;
         }, 0);
-        return totalCost;
+        const cost = hours.reduce((acc, cur) => {
+            return acc + cur.totalIncVat * 1;
+        }, 0);
+        return {
+            accumulatedConsumption: consumption,
+            accumulatedCost: cost,
+        };
     }
 
     /**
@@ -350,11 +355,17 @@ export class Tibber {
                 }
             }
 
+            // Figure out the hard part
+            const accumulatedData = this.calculateAccumulatedCostForDay(
+                tibberValidated.data,
+                where
+            );
+
             // Update the status object
             this.status[where].power = power;
             this.status[where].day.accumulatedConsumption =
                 accumulatedConsumption;
-            this.status[where].day.accumulatedCost = accumulatedCost; // TODO: This is not correct, should include fees. However, fixing it is not trivial
+            this.status[where].day.accumulatedCost = accumulatedData.total;
             this.status[where].day.accumulatedProduction =
                 tibberValidated.data.accumulatedProduction;
         } else {
