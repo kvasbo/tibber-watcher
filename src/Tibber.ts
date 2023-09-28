@@ -331,12 +331,6 @@ export class Tibber {
                 tibberValidated.data.accumulatedConsumption -
                 tibberValidated.data.accumulatedProduction;
 
-            const accumulatedCost =
-                tibberValidated.data.accumulatedReward === null
-                    ? tibberValidated.data.accumulatedCost
-                    : tibberValidated.data.accumulatedCost -
-                      tibberValidated.data.accumulatedReward;
-
             // Subtract production from power usage. If production is null, use last known value
             let power = tibberValidated.data.power;
             if (where === 'cabin') {
