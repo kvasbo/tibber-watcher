@@ -9,7 +9,7 @@
         "build": "tsc",
         "start": "node dist/watcher.js",
         "watch": "tsc --watch",
-        "dev": "nodemon dist/watcher.js",
+        "dev": "node --watch dist/watcher.js",
         "lint": "eslint ./src --ext .ts --fix"
     },
     "dependencies": {
@@ -29,7 +29,6 @@
         "eslint": "^8",
         "eslint-config-prettier": "^9",
         "eslint-plugin-prettier": "^5",
-        "nodemon": "^3",
         "prettier": "^3",
         "typescript": "^5"
     },
