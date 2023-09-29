@@ -2,6 +2,8 @@ services:
     tibber-watcher:
         image: ghcr.io/kvasbo/tibber-watcher:main
         restart: unless-stopped
+        ports:
+            - ${EXPOSED_PORT}:3000
         stdin_open: true
         tty: true
         environment:
