@@ -367,6 +367,9 @@ export class Tibber {
             this.status[where].day.accumulatedCost = accumulatedData.total;
             this.status[where].day.accumulatedProduction =
                 tibberValidated.data.accumulatedProduction;
+
+            console.log('Accumulated Data for ' + where);
+            console.table(this.status[where].day);
         } else {
             console.log('Tibber data not valid');
         }
