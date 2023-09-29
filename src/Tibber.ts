@@ -216,7 +216,7 @@ export class Tibber {
                 return date.hasSame(todayStart, 'day');
             });
 
-            const lastSeen = this.findLatestStartTimeInDataSet(consumption);
+            const lastSeen = this.findLatestStartTimeInDataSet(todayUsage);
             this.status[place.name].usageForTodayLastHourSeen = lastSeen.hour;
 
             todayUsage.forEach((data) => {
