@@ -9,6 +9,9 @@ COPY . /app
 RUN yarn
 RUN yarn run build
 
+# Smoke test
+RUN node /app/dist/test.js
+
 EXPOSE 3000
 
 CMD ["node", "/app/dist/watcher.js"]
