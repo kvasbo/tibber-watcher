@@ -10,7 +10,8 @@
         "start": "node dist/watcher.js",
         "watch": "tsc --watch",
         "dev": "node --watch dist/watcher.js",
-        "lint": "eslint ./src --ext .ts --fix"
+        "lint": "eslint ./src --ext .ts --fix",
+        "smoke": "node dist/test.js --smoke"
     },
     "dependencies": {
         "dotenv": "^16",
