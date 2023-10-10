@@ -118,7 +118,7 @@ export class Tibber {
     // Init data that needs to be in place in order to have correct data for later computations
     private async updateData() {
         await this.updateUsage();
-        console.log('Init data done');
+        console.log('Tibber data fetched.');
     }
 
     /**
@@ -160,6 +160,9 @@ export class Tibber {
         data.viewer.homes.forEach(async (home) => {
             // Find the place
             const place = places[home.id];
+            const todayStart = DateTime.now()
+                .setZone('Europe/Oslo')
+                .startOf('day');
 
             // Get consumption
             const consumption = home.consumption.nodes;
@@ -172,12 +175,12 @@ export class Tibber {
             console.log('Month so far', monthSoFar);
 
             // Get consumption for today up to last hour
-            // TODO: This is not correct, as it will not include the last hour. Fix it!
             const todaySoFar = await this.calculateUsageForPeriod(
                 consumption as IConsumption[],
                 DateTime.now().startOf('day').toJSDate(),
                 DateTime.now().startOf('hour').toJSDate()
             );
+
             this.status[place.name].usageForTodayUpToThisHour = todaySoFar;
 
             // Update price data
@@ -204,11 +207,6 @@ export class Tibber {
                     totalAfterSupport: totalAfterSupport, // What we actually pay
                 };
             });
-
-            // Calculate cost
-            const todayStart = DateTime.now()
-                .setZone('Europe/Oslo')
-                .startOf('day');
 
             // Get usage for the day, by the hour
             const todayUsage = consumption.filter((data) => {

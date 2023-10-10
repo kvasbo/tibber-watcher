@@ -29,55 +29,20 @@ export class PowerPrices {
         usedThisMonthSoFar: number = 0
     ): number {
         // If we are under usage threshold and over price thtreshold, we get a discount
+        let support = 0;
         if (
             usedThisMonthSoFar < PowerPrices.SUPPORT_CUTOFF_USAGE &&
             price > PowerPrices.SUPPORT_ENTRY_PRICE
         ) {
-            const support = (price - PowerPrices.SUPPORT_ENTRY_PRICE) * 0.9;
-            price = price - support;
+            support = (price - PowerPrices.SUPPORT_ENTRY_PRICE) * 0.9;
         }
-        return price;
-    }
-
-    // Calculate the current full power price with fees and VAT
-    public static getCurrentPrice(
-        currentSpotPriceExVAT: number,
-        when: Date,
-        usedThisMonthSoFar: number = 0
-    ): number {
-        const winter = PowerPrices.isItWinterPrice(when);
-        const nightOrWeekend = PowerPrices.isItNightOrWeekendPrice(when);
-
-        let price = 0;
-        // Not elegant, but hey
-        if (winter) {
-            if (nightOrWeekend) {
-                price =
-                    currentSpotPriceExVAT +
-                    PowerPrices.WINTER_NIGHT_OR_WEEKEND_PRICE;
-            } else {
-                price = currentSpotPriceExVAT + PowerPrices.WINTER_DAY_PRICE;
-            }
-        } else {
-            if (nightOrWeekend) {
-                price =
-                    currentSpotPriceExVAT +
-                    PowerPrices.SUMMER_NIGHT_OR_WEEKEND_PRICE;
-            } else {
-                price = currentSpotPriceExVAT + PowerPrices.SUMMER_DAY_PRICE;
-            }
-        }
-
-        // If we are under usage threshold and over price thtreshold, we get a discount
-        if (usedThisMonthSoFar < PowerPrices.SUPPORT_CUTOFF_USAGE) {
-            const support = Math.max(
-                0,
-                (price - PowerPrices.SUPPORT_ENTRY_PRICE) * 0.9
-            );
-            price = price - support;
-        }
-
-        return price;
+        console.table({
+            price,
+            support,
+            usedThisMonthSoFar,
+            after: price - support,
+        });
+        return price - support;
     }
 
     /**
