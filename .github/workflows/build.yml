@@ -3,7 +3,7 @@ name: Build and push to Github Container Registry
 on:
     push:
         branches:
-            - '*' # Pushes to any branch
+            - 'main' # Pushes to any branch
 
 env:
     REGISTRY: ghcr.io
