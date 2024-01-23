@@ -128,3 +128,4 @@ dist
 
 dist
 .env
+.DS_Store
