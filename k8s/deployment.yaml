@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tibber-watcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tibber-watcher
+  template:
+    metadata:
+      labels:
+        app: tibber-watcher
+    spec:
+      containers:
+        - name: tibber-watcher-app
+          image: ghcr.io/kvasbo/tibber-watcher:main
+          imagePullPolicy: Always
+          envFrom:
+          - secretRef:
+              name: tibberwatchconfig
