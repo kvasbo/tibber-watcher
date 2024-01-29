@@ -22,3 +22,9 @@ app.get('/', (req, res) => {
 app.listen(3000, () => {
     console.log('Tibber watcher listening on port 3000!');
 });
+
+// Handle Sigterm
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down');
+    process.exit(0);
+});
