@@ -20,8 +20,6 @@ jobs:
         steps:
             - name: Checkout repository
               uses: actions/checkout@v3
-            - name: Set up QEMU
-              uses: docker/setup-qemu-action@v3
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v2
             - name: Log in to the registry
@@ -38,6 +36,15 @@ jobs:
                   tags: |
                       type=ref, event=branch
                       type=sha
+            - name: Fix reference in k8s deployment
+              uses: richardrigutins/replace-in-files@v2
+              with:
+                  files: './k8s/deployment.yaml'
+                  search-text: 'ghcr.io/kvasbo/tibber-watcher:main'
+                  replacement-text: '${{ fromJSON(steps.meta.outputs.json).tags[1] }}'
+            - name: View k8s deployment file
+              run: |
+                  cat ./k8s/deployment.yaml
             - name: Setup Node.js
               uses: actions/setup-node@v3
               with:
@@ -59,3 +66,21 @@ jobs:
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
                   platforms: linux/amd64
+            - name: Connect to home network with Tailscale
+              uses: tailscale/github-action@v2
+              with:
+                  oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+                  oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+                  tags: tag:ci
+                  version: 1.58.2
+            - name: Setup Kubectl
+              uses: azure/setup-kubectl@v3
+              id: install-kubectl
+            - name: Install Kubernetes context
+              run: |
+                  mkdir -p ~/.kube
+                  echo "${{ secrets.KUBECTL_CONFIG }}" | base64 -d > ~/.kube/config
+                  kubectl get pods
+            - name: Deploy to Kubernetes
+              run: |
+                  kubectl apply -f ./k8s/deployment.yaml
