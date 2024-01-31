@@ -36,8 +36,8 @@ jobs:
               with:
                   images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
                   tags: |
-                    type=ref, event=branch
-                    type=sha
+                      type=ref, event=branch
+                      type=sha
             - name: Setup Node.js
               uses: actions/setup-node@v3
               with:
