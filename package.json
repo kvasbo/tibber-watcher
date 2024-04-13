@@ -10,7 +10,7 @@
         "start": "node dist/watcher.js",
         "watch": "tsc --watch",
         "dev": "node --watch dist/watcher.js",
-        "lint": "eslint ./src --ext .ts --fix",
+        "lint": "ESLINT_USE_FLAT_CONFIG=false eslint ./src --fix",
         "smoke": "node dist/test.js --smoke"
     },
     "dependencies": {
@@ -43,9 +43,6 @@
         "plugins": [
             "@typescript-eslint",
             "prettier"
-        ],
-        "ignorePatterns": [
-            "ts/client/*.ts"
         ],
         "extends": [
             "eslint:recommended",
