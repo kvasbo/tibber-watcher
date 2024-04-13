@@ -107,11 +107,11 @@ export class Tibber {
     public constructor(mqttClient: MqttClient) {
         this.mqttClient = mqttClient;
 
-        this.updateData();
+        // this.updateData();
         this.connectToTibber();
 
         // this.connectToTibber();
-        setInterval(() => this.updateData(), 1000 * 60 * 5); // Update data every five minutes
+        // setInterval(() => this.updateData(), 1000 * 60 * 5); // Update data every five minutes
         setInterval(() => this.sendToMQTT(), 1000 * PUSH_INTERVAL); // Update MQTT every 15 secs.
     }
 
@@ -353,16 +353,18 @@ export class Tibber {
             }
 
             // Figure out the hard part
+            /*
             const accumulatedData = this.calculateAccumulatedCostForDay(
                 tibberValidated.data,
                 where
             );
+            */
 
             // Update the status object
             this.status[where].power = power;
             this.status[where].day.accumulatedConsumption =
                 accumulatedConsumption;
-            this.status[where].day.accumulatedCost = accumulatedData.total;
+            // this.status[where].day.accumulatedCost = accumulatedData.total;
             this.status[where].day.accumulatedProduction =
                 tibberValidated.data.accumulatedProduction;
 
