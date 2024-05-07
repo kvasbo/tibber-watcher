@@ -10,7 +10,7 @@ services:
             - TIBBER_KEY=${TIBBER_KEY}
             - TIBBER_ID_HOME=${TIBBER_ID_HOME}
             - TIBBER_ID_CABIN=${TIBBER_ID_CABIN}
-            - HQTT_HOST=${MQTT_HOST}
+            - MQTT_HOST=${MQTT_HOST}
             - MQTT_USER=${MQTT_USER}
             - MQTT_PASS=${MQTT_PASS}
             - MQTT_ROOT_TOPIC=${MQTT_ROOT_TOPIC}
