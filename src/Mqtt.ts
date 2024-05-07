@@ -3,13 +3,10 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const MQTT_URL = process.env.MQTT_URL as string;
-const MQTT_PORT = process.env.MQTT_PORT as string;
+const MQTT_HOST = process.env.MQTT_HOST as string;
 const MQTT_USER = process.env.MQTT_USER as string;
 const MQTT_PASS = process.env.MQTT_PASS as string;
 const MQTT_ROOT_TOPIC = process.env.MQTT_ROOT_TOPIC as string;
-
-const MQTT_HOST = `mqtts://${MQTT_URL}:${MQTT_PORT}`;
 
 const options: mqtt.IClientOptions = {
     username: MQTT_USER,
