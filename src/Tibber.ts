@@ -17,7 +17,7 @@ const TibberSubscriptionSchema = z.object({
     power: z.number(),
     accumulatedConsumption: z.number(),
     accumulatedProduction: z.number(),
-    accumulatedCost: z.number(),
+    accumulatedCost: z.number().nullable(),
     minPower: z.number(),
     averagePower: z.number(),
     maxPower: z.number(),
@@ -370,7 +370,9 @@ export class Tibber {
 
             console.log('Accumulated Data for ' + where);
             console.table(this.status[where].day);
+            console.log('Power: ' + power);
         } else {
+            console.log(tibberValidated.error);
             console.log('Tibber data not valid');
         }
     }
