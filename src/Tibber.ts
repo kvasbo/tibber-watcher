@@ -96,6 +96,7 @@ const tibberFeedCabin = new TibberFeed(tibberQueryCabin);
 export class Tibber {
     private mqttClient: MqttClient;
     private lastCabinPower: number = 0; // Hack to handle intermittent power production data
+    public lastUpdated: Date = new Date();
 
     // The new structure for everything!
     private status: PowerStatus = {
@@ -110,15 +111,8 @@ export class Tibber {
         // this.updateData();
         this.connectToTibber();
 
-        // this.connectToTibber();
         // setInterval(() => this.updateData(), 1000 * 60 * 5); // Update data every five minutes
-        setInterval(() => this.sendToMQTT(), 1000 * PUSH_INTERVAL); // Update MQTT every 15 secs.
-    }
-
-    // Init data that needs to be in place in order to have correct data for later computations
-    private async updateData() {
-        await this.updateUsage();
-        console.log('Tibber data fetched.');
+        setInterval(() => this.pushData(), 1000 * PUSH_INTERVAL); // Update MQTT every 15 secs.
     }
 
     /**
@@ -330,6 +324,7 @@ export class Tibber {
     public parseRealtimeData(data: TibberData, where: Place): void {
         const tibberValidated = TibberSubscriptionSchema.safeParse(data);
         if (tibberValidated.success) {
+            this.lastUpdated = new Date();
             const accumulatedConsumption =
                 tibberValidated.data.accumulatedConsumption -
                 tibberValidated.data.accumulatedProduction;
@@ -382,8 +377,16 @@ export class Tibber {
         return this.status;
     }
 
-    private sendToMQTT() {
+    private pushData() {
         // Publish to MQTT
+        const now = new Date();
+        console.log("Age of data", (now.getTime() - this.lastUpdated.getTime()) / 1000, "seconds");
+        const ageOfData = (now.getTime() - this.lastUpdated.getTime()) / 1000;
+        // Restart if data is too old
+        if (ageOfData > 30) {
+            console.log('Data is too old, restarting');
+            process.exit();
+        }
         this.mqttClient.publish('power', JSON.stringify(this.status));
     }
 }
