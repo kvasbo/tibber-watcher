@@ -6,10 +6,9 @@
     "author": "Audun Kvasbø <audun@kvasbo.no>",
     "license": "MIT",
     "scripts": {
-        "start": "node dist/watcher.js",
-        "dev": "node --watch dist/watcher.js",
-        "lint": "ESLINT_USE_FLAT_CONFIG=false eslint ./src --fix",
-        "smoke": "node dist/test.js --smoke"
+        "start": "node src/Watcher.mjs",
+        "dev": "node --watch src/Watcher.mjs",
+        "lint": "ESLINT_USE_FLAT_CONFIG=false eslint ./src --fix"
     },
     "dependencies": {
         "dotenv": "^16",

@@ -80,8 +80,8 @@ const tibberQueryHome = new TibberQuery(configHome)
 const tibberQueryCabin = new TibberQuery(configCabin)
 const tibberQuery = new TibberQuery(configBase)
 
-const tibberFeedHome = new TibberFeed(tibberQueryHome)
-const tibberFeedCabin = new TibberFeed(tibberQueryCabin)
+const tibberFeedHome = new TibberFeed(tibberQueryHome, 60000, true, 5000);
+const tibberFeedCabin = new TibberFeed(tibberQueryCabin, 60000, true, 5000);
 
 export class Tibber {
   lastCabinPower = 0 // Hack to handle intermittent power production data
@@ -97,31 +97,30 @@ export class Tibber {
   constructor(mqttClient) {
     this.mqttClient = mqttClient
 
-    // this.updateData();
-    this.connectToTibber()
+    this.setupTibberFeed(tibberFeedHome, "home")
+    this.setupTibberFeed(tibberFeedCabin, "cabin")
 
     // setInterval(() => this.updateData(), 1000 * 60 * 5); // Update data every five minutes
     setInterval(() => this.pushData(), 1000 * PUSH_INTERVAL) // Update MQTT every 15 secs.
   }
 
-  /**
-   * Connect to Tibber with a delay to avoid hammering the API
-   */
-  async connectToTibber() {
+  setupTibberFeed(feed, where) {
+    feed.on("data", data => {
+      this.parseRealtimeData(data, where);
+    });
+    feed.on("error", error => {
+      console.log(`Error for ${where}`, error);
+    });
+    feed.on("connected", () => {
+      console.log(`Tibber connected to ${where}`);
+    });
+    feed.on("data", data => {
+      this.parseRealtimeData(data, where);
+    })
+    console.log(`Tibber set up for ${where}`);
     setTimeout(async () => {
-      tibberFeedHome.on("data", data => {
-        this.parseRealtimeData(data, "home")
-      })
-      await tibberFeedHome.connect()
-      console.log("Tibber home initiated")
-    }, Math.random() * 5000)
-    setTimeout(async () => {
-      tibberFeedCabin.on("data", data => {
-        this.parseRealtimeData(data, "cabin")
-      })
-      await tibberFeedCabin.connect()
-      console.log("Tibber cabin initiated")
-    }, Math.random() * 5000)
+      feed.connect();
+    }, Math.random() * 5000);
   }
 
   // The new nice all-in-one-update function
