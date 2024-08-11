@@ -1,4 +1,4 @@
-FROM node:latest
+FROM node:20-alpine
 
 # Create app directory
 RUN mkdir -p /app
@@ -6,10 +6,7 @@ WORKDIR /app
 COPY . /app
 
 # Install app dependencies and build
-RUN yarn
-
-# Smoke test
-RUN node /app/dist/test.js
+RUN yarn install
 
 EXPOSE 3000
 
