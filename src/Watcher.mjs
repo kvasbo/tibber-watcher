@@ -1,5 +1,5 @@
-import { MqttClient } from "./Mqtt"
-import { Tibber } from "./Tibber"
+import { MqttClient } from "./Mqtt.mjs"
+import { Tibber } from "./Tibber.mjs"
 
 console.log("Starting Tibber Watcher")
 const mqttClient = new MqttClient()

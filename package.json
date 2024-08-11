@@ -23,29 +23,19 @@
     "devDependencies": {
         "@types/luxon": "*",
         "@types/node": "^20",
-        "@typescript-eslint/eslint-plugin": "^7",
-        "@typescript-eslint/parser": "^7",
         "eslint": "^9",
         "eslint-config-prettier": "^9",
         "eslint-plugin-prettier": "^5",
-        "prettier": "^3",
-        "typescript": "^5"
+        "prettier": "^3"
     },
     "prettier": {
-        "trailingComma": "es5",
-        "tabWidth": 4,
-        "semi": true,
-        "singleQuote": true
     },
     "eslintConfig": {
         "plugins": [
-            "@typescript-eslint",
             "prettier"
         ],
         "extends": [
             "eslint:recommended",
-            "plugin:@typescript-eslint/eslint-recommended",
-            "plugin:@typescript-eslint/recommended",
             "prettier"
         ],
         "parserOptions": {

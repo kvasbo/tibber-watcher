@@ -1,8 +1,8 @@
 import { TibberFeed, TibberQuery } from "tibber-api"
 import * as z from "zod"
 import { DateTime } from "luxon"
-import { PowerPrices } from "./PowerPrices"
-import { usageQuery } from "./TibberQueries"
+import { PowerPrices } from "./PowerPrices.mjs"
+import { usageQuery } from "./TibberQueries.mjs"
 
 const TibberSubscriptionSchema = z.object({
   timestamp: z.string(),
