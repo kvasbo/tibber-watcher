@@ -3,15 +3,14 @@
         "outDir": "./dist",
         "lib": ["es2020", "DOM"],
         "module": "CommonJS",
-        "target": "es2020",
+        "target": "ESNext",
         "allowJs": false,
         "moduleResolution": "node",
-        "removeComments": true,
+        "removeComments": false,
         "esModuleInterop": true,
         "skipLibCheck": true,
         "noImplicitAny": true,
-        "sourceMap": true,
-        "sourceRoot": "./src"
+        "sourceMap": false
     },
     "include": ["src/*"]
 }
