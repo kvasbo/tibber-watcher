@@ -370,7 +370,7 @@ export class Tibber {
       console.log("Data is too old, restarting")
       process.exit()
     }
-    this.mqttClient.publish("power", JSON.stringify(this.status))
+    this.mqttClient.publish("tibber/power", JSON.stringify(this.status))
   }
 }
 

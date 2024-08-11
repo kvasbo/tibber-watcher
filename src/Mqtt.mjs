@@ -6,7 +6,6 @@ dotenv.config()
 const MQTT_HOST = process.env.MQTT_HOST
 const MQTT_USER = process.env.MQTT_USER
 const MQTT_PASS = process.env.MQTT_PASS
-const MQTT_ROOT_TOPIC = process.env.MQTT_ROOT_TOPIC
 
 const options = {
   username: MQTT_USER,
@@ -40,9 +39,8 @@ export class MqttClient {
    */
   async publish(topic, message) {
     if (message !== null && message !== undefined) {
-      const fullTopic = MQTT_ROOT_TOPIC + "/" + topic
-      this.client.publish(fullTopic, message.toString())
-      this.log(`Published to ${fullTopic}`)
+      this.client.publish(topic, message.toString())
+      this.log(`Published to ${topic}`)
     }
   }
 
