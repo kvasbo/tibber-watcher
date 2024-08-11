@@ -8,7 +8,6 @@ on:
 env:
     REGISTRY: ghcr.io
     IMAGE_NAME: ${{ github.repository }}
-    NODE_VERSION: ^20.9.0
 
 jobs:
     build:
@@ -36,13 +35,6 @@ jobs:
                   tags: |
                       type=ref, event=branch
                       type=sha
-            - name: Setup Node.js
-              uses: actions/setup-node@v3
-              with:
-                  node-version: ${{ env.NODE_VERSION }}
-                  cache: yarn
-            - name: Install dependencies
-              run: yarn install
             - name: Build and push
               uses: docker/build-push-action@v5
               with:
@@ -50,4 +42,4 @@ jobs:
                   push: true
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
-                  platforms: linux/amd64
+                  platforms: linux/amd64, linux/arm64
