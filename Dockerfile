@@ -10,4 +10,4 @@ RUN yarn install
 
 EXPOSE 3000
 
-CMD ["node", "/app/src/Watcher.js"]
+CMD ["node", "/app/src/Watcher.mjs"]
